@@ -69,10 +69,17 @@ Put background explanations in hint boxes so they don't interrupt the flow:
 
 ## File Organization
 
-- `/docs/public/` — Tutorial HTML files
-- `/babygrad/` — Actual implementation (student fills this in)
-- `/tests/` — Tests to verify implementations
-- `/examples/` — Working examples using babygrad
+- `/public/` — Tutorial HTML files
+- `wrangler.toml` — Cloudflare Workers config
+- `CLAUDE.md` — This file
+
+The actual babygrad implementation lives in a separate repo: `emily-flambe/deep-learning-library`
+
+## Deployment
+
+The site auto-deploys on every push to `main` via GitHub Actions.
+
+**Live URL:** https://babygrad-tutorial.emily-cogsdill.workers.dev
 
 ## Styling
 
