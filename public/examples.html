@@ -31,253 +31,820 @@
     <main class="content">
       <h1>Chapter 12: Examples</h1>
 
-      <p>This page showcases progressively advanced deep learning implementations using the babygrad library.</p>
+      <p>A few examples created using <code>babygrad</code>.</p>
 
-      <h2>Example 1: Simple MNIST</h2>
-      <p>A basic two-layer neural network with manual gradient updates. Parses gzipped MNIST data and trains on batches, achieving ~96% accuracy on individual batches.</p>
+      <h2>12.1 Simple MNIST</h2>
+
+      <div class="note">
+        <p><strong>data/</strong> folder consists of :</p>
+        <ul>
+          <li>t10k-images-idx3-ubyte.gz</li>
+          <li>t10k-labels-idx1-ubyte.gz</li>
+          <li>train-images-idx3-ubyte.gz</li>
+          <li>train-labels-idx1-ubyte.gz</li>
+        </ul>
+      </div>
+
+      <p><strong>File</strong> : <strong>examples/simple_mnist.py</strong></p>
+
+      <hr>
+
+      <pre><code>"""
+A simple example of training a two-layer neural network on MNIST
+"""
+import struct
+import gzip
+import numpy as np
+from babygrad import Tensor, ops
+
+
+def parse_mnist(image_filename, label_filename):
+    """
+    Args:
+        image_filename (str): Path to the gzipped image file.
+        label_filename (str): Path to the gzipped label file.
+
+    Returns:
+        Tuple (X, y):
+            X (np.ndarray): Images as a (num_examples, 784) array.
+            y (np.ndarray): Labels as a (num_examples,) array.
+    """
+    with gzip.open(image_filename, 'rb') as f:
+        magic, num_images, rows, cols = struct.unpack('&gt;IIII', f.read(16))
+        image_data = np.frombuffer(f.read(), dtype=np.uint8)
+        images = image_data.reshape(num_images, rows * cols)
+
+    with gzip.open(label_filename, "rb") as f:
+        magic, num_labels = struct.unpack('&gt;II', f.read(8))
+        labels = np.frombuffer(f.read(), dtype=np.uint8)
+
+    normalized_images = images.astype(np.float32) / 255.0
+    return normalized_images, labels
+
+
+class SimpleNN:
+    def __init__(self, input_size, hidden_size, num_classes):
+        self.W1 = Tensor(np.random.randn(input_size, hidden_size)
+                    .astype(np.float32) / np.sqrt(hidden_size))
+        self.W2 = Tensor(np.random.randn(hidden_size, num_classes)
+                    .astype(np.float32) / np.sqrt(num_classes))
+
+    def forward(self, x: Tensor) -&gt; Tensor:
+        z1 = x @ self.W1 # (8,784) @ (784, 100) -&gt; (8,100)
+        a1 = ops.relu(z1)
+        logits = a1 @ self.W2 #  (8,100) @ (100,10) -&gt; (8,10)
+        return logits
+    def parameters(self):
+        return [self.W1, self.W2]
+
+def softmax_loss(logits: Tensor, y_true: Tensor) -&gt; Tensor:
+    """
+    Args:
+        logits (Tensor): The raw output scores from the model.
+        y_true (Tensor): The one-hot encoded true labels.
+    Returns:
+        A scalar tensor representing the average loss.
+    """
+    batch_size = logits.shape[0]
+    log_sum_exp = ops.log(ops.exp(logits).sum(axes=1))
+    z_y = (logits * y_true).sum(axes=1)
+    loss = log_sum_exp - z_y
+    return loss.sum() / batch_size
+
+
+def train_epoch(model: SimpleNN, X_train: np.ndarray, y_train: np.ndarray,
+                 lr: float, batch_size: int):
+    num_examples = X_train.shape[0]
+    for i in range(0, num_examples, batch_size):
+        # Get a batch of data
+        x_batch_np = X_train[i:i+batch_size]
+        y_batch_np = y_train[i:i+batch_size]
+
+        x_batch = Tensor(x_batch_np)
+
+        logits = model.forward(x_batch)
+
+        num_classes = logits.shape[1]
+        y_one_hot_np = np.zeros((y_batch_np.shape[0], num_classes),
+                         dtype=np.float32)
+        y_one_hot_np[np.arange(y_batch_np.shape[0]), y_batch_np] = 1
+        y_one_hot = Tensor(y_one_hot_np)
+
+        loss = softmax_loss(logits, y_one_hot)
+
+        for p in model.parameters():
+            p.grad = None
+        loss.backward()
+        for p in model.parameters():
+            p.data = p.data - lr * p.grad
+        preds = logits.data.argmax(axis=1)
+        acc = np.mean(preds == y_batch_np)
+
+        print(f"Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f},
+                 Accuracy = {acc*100:.2f}%")
+if __name__ == "__main__":
+    EPOCHS = 3
+    LEARNING_RATE = 0.1
+    BATCH_SIZE = 8
+    INPUT_SIZE = 784
+    HIDDEN_SIZE = 100
+    NUM_CLASSES = 10
+
+    print("Loading MNIST data...")
+    X_train, y_train = parse_mnist("data/train-images-idx3-ubyte.gz",
+                         "data/train-labels-idx1-ubyte.gz")
+    X_test, y_test = parse_mnist("data/t10k-images-idx3-ubyte.gz",
+                     "data/t10k-labels-idx1-ubyte.gz")
+    print("Data loaded.\n")
+
+    np.random.seed(42)
+    model = SimpleNN(INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES)
+
+    for epoch in range(EPOCHS):
+        print(f"--- Epoch {epoch+1}/{EPOCHS} ---")
+        train_epoch(model, X_train, y_train, LEARNING_RATE, BATCH_SIZE)
+        print("-" * 20)</code></pre>
+
+      <pre><code>  Batch  13: Loss = 0.2163, Accuracy = 96.09%
+  Batch  14: Loss = 0.1742, Accuracy = 96.09%
+  Batch  15: Loss = 0.1630, Accuracy = 96.88%
+  Batch  16: Loss = 0.1862, Accuracy = 95.31%
+  Batch  17: Loss = 0.1637, Accuracy = 96.09%
+  Batch  18: Loss = 0.1812, Accuracy = 95.31%
+  Batch  19: Loss = 0.2156, Accuracy = 94.53%
+  Batch  20: Loss = 0.1259, Accuracy = 99.22%</code></pre>
+
+      <h2>12.2 Decent MNIST</h2>
 
       <pre><code>import numpy as np
-from babygrad import Tensor
-from babygrad.data import parse_mnist
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Dropout, Module, Linear, ReLU,
+Sequential, SoftmaxLoss, LayerNorm1d, BatchNorm1d
+from baby.data import MNISTDataset, DataLoader
 
-# Load data
-X_train, y_train = parse_mnist('train-images.gz', 'train-labels.gz')
-X_train = X_train.reshape(-1, 784) / 255.0
+def train_epoch(model: Module, loss_fn: Module, optimizer: Adam,
+             train_loader: DataLoader):
+    for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
+        logits = model(x_batch)
+        loss = loss_fn(logits, y_batch.data)
 
-# Initialize weights
-W1 = Tensor(np.random.randn(784, 128) * 0.01)
-b1 = Tensor(np.zeros(128))
-W2 = Tensor(np.random.randn(128, 10) * 0.01)
-b2 = Tensor(np.zeros(10))
-
-lr = 0.1
-batch_size = 64
-
-for i in range(1000):
-    # Get batch
-    idx = np.random.randint(0, len(X_train), batch_size)
-    x = Tensor(X_train[idx])
-    y = y_train[idx]
-
-    # Forward pass
-    h = (x @ W1 + b1).relu()
-    out = h @ W2 + b2
-
-    # Compute loss (softmax cross-entropy)
-    loss = out.softmax_loss(y)
-
-    # Backward pass
-    loss.backward()
-
-    # Update weights
-    W1.data -= lr * W1.grad
-    b1.data -= lr * b1.grad
-    W2.data -= lr * W2.grad
-    b2.data -= lr * b2.grad
-
-    # Zero gradients
-    W1.grad = None
-    b1.grad = None
-    W2.grad = None
-    b2.grad = None
-
-    if i % 100 == 0:
-        print(f"Step {i}, Loss: {loss.data:.4f}")</code></pre>
-
-      <h2>Example 2: Decent MNIST</h2>
-      <p>Introduces higher-level abstractions including the Adam optimizer, DataLoader, and modular components like BatchNorm and Dropout.</p>
-
-      <pre><code>from babygrad import nn, optim
-from babygrad.data import MNISTDataset, DataLoader
-
-# Define model with BatchNorm and Dropout
-model = nn.Sequential(
-    nn.Flatten(),
-    nn.Linear(784, 256),
-    nn.BatchNorm1d(256),
-    nn.ReLU(),
-    nn.Dropout(0.2),
-    nn.Linear(256, 128),
-    nn.BatchNorm1d(128),
-    nn.ReLU(),
-    nn.Dropout(0.2),
-    nn.Linear(128, 10)
-)
-
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fn = nn.SoftmaxLoss()
-
-train_dataset = MNISTDataset('train-images.gz', 'train-labels.gz')
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-
-for epoch in range(10):
-    model.train()
-    for x, y in train_loader:
-        optimizer.zero_grad()
-        pred = model(x)
-        loss = loss_fn(pred, y)
+        optimizer.reset_grad()
         loss.backward()
         optimizer.step()
-    print(f"Epoch {epoch+1} complete")</code></pre>
 
-      <h2>Example 3: Better MNIST</h2>
-      <p>Streamlines the previous approach by introducing a Trainer class that handles the training loop automatically.</p>
+        preds = logits.data.argmax(axis=1)
+        acc = np.mean(preds == y_batch.data)
 
-      <pre><code>from babygrad import nn, optim
-from babygrad.data import MNISTDataset, DataLoader
-from babygrad.trainer import Trainer
+        print(f"Batch {batch_idx+1:3d}: Loss = {loss.data:.4f},
+                 Accuracy = {acc*100:.2f}%")
 
-model = nn.Sequential(
-    nn.Flatten(),
-    nn.Linear(784, 256),
-    nn.ReLU(),
-    nn.Linear(256, 10)
-)
+def evaluate(model: Module, test_loader: DataLoader):
+    model.eval()
+    total_correct = 0
+    total_count = 0
+    for x_batch, y_batch in test_loader:
+        logits = model(x_batch)
+        preds = logits.data.argmax(axis=1)
+        total_correct += np.sum(preds == y_batch.data)
+        total_count += y_batch.data.shape[0]
+    return total_correct / total_count
 
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fn = nn.SoftmaxLoss()
 
-train_loader = DataLoader(MNISTDataset('train-images.gz', 'train-labels.gz'),
-                          batch_size=64, shuffle=True)
-test_loader = DataLoader(MNISTDataset('test-images.gz', 'test-labels.gz'),
-                         batch_size=64)
+if __name__ == "__main__":
+    EPOCHS = 5
+    LEARNING_RATE = 0.001
+    BATCH_SIZE = 128
+    INPUT_SIZE = 784
+    HIDDEN_SIZE = 100
+    NUM_CLASSES = 10
 
-trainer = Trainer(model, optimizer, loss_fn, train_loader, val_loader=test_loader)
-trainer.fit(epochs=10)</code></pre>
+    print("Loading MNIST data via Dataset...")
+    train_dataset = MNISTDataset("data/train-images-idx3-ubyte.gz",
+                     "data/train-labels-idx1-ubyte.gz")
+    test_dataset = MNISTDataset("data/t10k-images-idx3-ubyte.gz",
+                     "data/t10k-labels-idx1-ubyte.gz")
 
-      <h2>Example 4: Simple CNN</h2>
-      <p>Applies convolutional layers to MNIST. Note the data format conversion from NHWC to NCHW. Achieves approximately 98% validation accuracy.</p>
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                     shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                 shuffle=False)
+    print("Data loaded.\n")
 
-      <pre><code>from babygrad import nn, optim
-from babygrad.trainer import Trainer
+    np.random.seed(42)
 
-model = nn.Sequential(
-    # Input: (N, 1, 28, 28)
-    nn.Conv2d(1, 32, kernel_size=3, padding=1),
-    nn.ReLU(),
-    nn.MaxPool2d(2),  # (N, 32, 14, 14)
+    model = Sequential(
+        Flatten(),
+        Linear(INPUT_SIZE, HIDDEN_SIZE),
+        BatchNorm1d(HIDDEN_SIZE),
+        ReLU(),
+        Dropout(),
+        Linear(HIDDEN_SIZE, NUM_CLASSES)
+    )
 
-    nn.Conv2d(32, 64, kernel_size=3, padding=1),
-    nn.ReLU(),
-    nn.MaxPool2d(2),  # (N, 64, 7, 7)
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
 
-    nn.Flatten(),     # (N, 64*7*7)
-    nn.Linear(64*7*7, 128),
-    nn.ReLU(),
-    nn.Linear(128, 10)
-)
+    for epoch in range(EPOCHS):
+        model.train()
+        print(f"\n--- Epoch {epoch+1}/{EPOCHS} ---")
+        train_epoch(model, loss_fn, optimizer, train_loader)
+        test_acc = evaluate(model, test_loader)
+        print(f"--- Test Accuracy = {test_acc*100:.2f}% ---")
+        print("-" * 40)</code></pre>
 
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fn = nn.SoftmaxLoss()
+      <h2>12.3 Better MNIST</h2>
 
-# Note: Ensure data is in NCHW format
-trainer = Trainer(model, optimizer, loss_fn, train_loader, val_loader=test_loader)
-trainer.fit(epochs=5)</code></pre>
+      <pre><code>import numpy as np
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Dropout, Flatten, Linear,
+ ReLU, Sequential, SoftmaxLoss, BatchNorm1d
+from baby.data import MNISTDataset, DataLoader
+from baby.trainer import Trainer
 
-      <h2>Example 5: Better CNN</h2>
-      <p>Stacks additional convolutional blocks hierarchically. Validation improvements plateau around 98%.</p>
+if __name__ == "__main__":
+    EPOCHS = 5
+    LEARNING_RATE = 0.001
+    BATCH_SIZE = 128
+    INPUT_SIZE = 784
+    HIDDEN_SIZE = 100
+    NUM_CLASSES = 10
 
-      <pre><code>model = nn.Sequential(
-    nn.Conv2d(1, 32, 3, padding=1),
-    nn.BatchNorm2d(32),
-    nn.ReLU(),
-    nn.Conv2d(32, 32, 3, padding=1),
-    nn.BatchNorm2d(32),
-    nn.ReLU(),
-    nn.MaxPool2d(2),
+    print("Loading MNIST data via Dataset...")
+    train_dataset = MNISTDataset("data/train-images-idx3-ubyte.gz",
+                 "data/train-labels-idx1-ubyte.gz")
+    test_dataset = MNISTDataset("data/t10k-images-idx3-ubyte.gz",
+                 "data/t10k-labels-idx1-ubyte.gz")
 
-    nn.Conv2d(32, 64, 3, padding=1),
-    nn.BatchNorm2d(64),
-    nn.ReLU(),
-    nn.Conv2d(64, 64, 3, padding=1),
-    nn.BatchNorm2d(64),
-    nn.ReLU(),
-    nn.MaxPool2d(2),
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                    shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                     shuffle=False)
+    print("Data loaded.\n")
 
-    nn.Flatten(),
-    nn.Linear(64*7*7, 256),
-    nn.ReLU(),
-    nn.Dropout(0.5),
-    nn.Linear(256, 10)
-)</code></pre>
+    np.random.seed(42)
+    model = Sequential(
+        Flatten(),
+        Linear(INPUT_SIZE, HIDDEN_SIZE),
+        BatchNorm1d(HIDDEN_SIZE),
+        ReLU(),
+        Dropout(),
+        Linear(HIDDEN_SIZE, NUM_CLASSES)
+    )
 
-      <h2>Example 6: Simple CIFAR10</h2>
-      <p>Introduces a new dataset with color images. Requires implementing CIFAR10Dataset class with data loading from binary files. Note that validation accuracy may not improve much without augmentation.</p>
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
 
-      <pre><code>class CIFAR10Dataset(Dataset):
-    def __init__(self, data_dir, train=True, transforms=None):
-        super().__init__(transforms)
-        import data_loader  # use appropriate data loading
+    trainer = Trainer(model, optimizer, loss_fn, train_loader,
+             val_loader=test_loader)
+    trainer.fit(EPOCHS)</code></pre>
 
-        if train:
-            # Load training batches
-            images, labels = [], []
-            for i in range(1, 6):
-                with open(f"{data_dir}/data_batch_{i}", 'rb') as f:
-                    batch = data_loader.load(f, encoding='bytes')
-                    images.append(batch[b'data'])
-                    labels.extend(batch[b'labels'])
-            self.images = np.vstack(images).reshape(-1, 3, 32, 32)
-            self.labels = np.array(labels)
-        else:
-            with open(f"{data_dir}/test_batch", 'rb') as f:
-                batch = data_loader.load(f, encoding='bytes')
-                self.images = batch[b'data'].reshape(-1, 3, 32, 32)
-                self.labels = np.array(batch[b'labels'])
+      <h2>12.4 Simple CNN</h2>
 
-    def __len__(self):
-        return len(self.labels)
+      <p>In <strong>nn.Conv</strong> I mentioned that most <strong>datasets</strong> use the <strong>NCHW</strong> format. So we used <strong>transpose</strong> before calling <strong>op.Conv</strong>.</p>
 
-    def __getitem__(self, idx):
-        img = self.images[idx] / 255.0
-        return self.apply_transform(img), self.labels[idx]</code></pre>
+      <p>But in <strong>MNISTDataset</strong> We are returning <strong>NHWC</strong> format. That means we need to <strong>tranpose</strong> <strong>NHWC</strong> to <strong>NCHW</strong> and then <strong>feed the data into our model</strong>.</p>
 
-      <h2>Example 7: Simple ResNet</h2>
-      <p>Implements residual connections for CIFAR10. Adding data transformations like RandomFlipHorizontal and RandomCrop significantly improves performance, pushing validation accuracy past 70%.</p>
+      <p><strong>CIFAR10</strong> Will use <strong>NCHW</strong> only.</p>
 
-      <pre><code>class ResBlock(nn.Module):
-    def __init__(self, channels):
+      <pre><code>import numpy as np
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Module, Conv, Linear, ReLU,
+ Sequential,Dropout, SoftmaxLoss, Flatten, BatchNorm1d
+from baby.data import MNISTDataset, DataLoader
+from baby.trainer import Trainer
+
+
+class SimpleCNN(Module):
+    """
+    Conv -&gt; ReLU -&gt; Flatten -&gt; Linear -&gt; BatchNorm -&gt; ReLU -&gt; Dropout -&gt; Linear
+    """
+    def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(channels)
+        self.model = Sequential(
+            Conv(in_channels=1, out_channels=16, kernel_size=3, stride=1,
+                 bias=True),
+            ReLU(),
+            Flatten(),
+            Linear(16 * 28 * 28, 128),
+            BatchNorm1d(128),
+            ReLU(),
+            Dropout(p=0.5),
+            Linear(128, 10)
+        )
 
     def forward(self, x):
-        residual = x
-        out = self.conv1(x).relu()
-        out = self.bn1(out)
-        out = self.conv2(out)
-        out = self.bn2(out)
-        return (out + residual).relu()
+        # x shape: (batch, 28, 28, 1) from MNISTDataset in NHWC format
+        # Need to convert to (batch, 1, 28, 28) for Conv (NCHW)
 
-# Data augmentation transforms
-transforms = [
-    RandomFlipHorizontal(),
-    RandomCrop(32, padding=4),
-    Normalize(mean=[0.4914, 0.4822, 0.4465],
-              std=[0.2023, 0.1994, 0.2010])
-]
+        # Transpose: (batch, 28, 28, 1) -&gt; (batch, 1, 28, 28)
+        x_data = x.data if isinstance(x, Tensor) else x
+        x_reshaped = x_data.transpose(0, 3, 1, 2)  # NHWC -&gt; NCHW
+        x = Tensor(x_reshaped)
 
-train_dataset = CIFAR10Dataset('data/cifar10', train=True, transforms=transforms)
-train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+        return self.model(x)
 
-# Model with residual blocks
-model = nn.Sequential(
-    nn.Conv2d(3, 64, 3, padding=1),
-    nn.BatchNorm2d(64),
-    nn.ReLU(),
-    ResBlock(64),
-    ResBlock(64),
-    nn.MaxPool2d(2),
-    # ... more blocks
-    nn.Flatten(),
-    nn.Linear(64*8*8, 10)
-)</code></pre>
+if __name__ == "__main__":
+    EPOCHS = 6
+    LEARNING_RATE = 0.001
+    BATCH_SIZE = 128
+
+    print("Loading MNIST data...")
+    train_dataset = MNISTDataset(
+        "data/train-images-idx3-ubyte.gz",
+        "data/train-labels-idx1-ubyte.gz"
+    )
+
+    test_dataset = MNISTDataset(
+        "data/t10k-images-idx3-ubyte.gz",
+        "data/t10k-labels-idx1-ubyte.gz"
+    )
+
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                    shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                     shuffle=False)
+
+    print("Data loaded.\n")
+
+    np.random.seed(42)
+    model = SimpleCNN()
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+    trainer = Trainer(
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        train_loader=train_loader,
+        val_loader=test_loader
+    )
+
+    print("Starting training...\n")
+
+    trainer.fit(epochs=EPOCHS)
+
+    print("\n" + "="*40)
+    final_acc = trainer.evaluate(loader=test_loader)
+    print(f"Final Test Accuracy: {final_acc*100:.2f}%")
+    print("="*40)
+
+    print("\nSaving model...")
+    model.save("simple_cnn_mnist.pt")
+    print("Done!")  </code></pre>
+
+      <pre><code>End of Epoch 1 - Avg Loss: 0.1653 | Val Acc: 97.96%
+--- Epoch 2/6 ---
+  Batch   0: Loss = 0.0402 | Acc = 98.44%
+  Batch  50: Loss = 0.0371 | Acc = 99.22%
+  Batch 100: Loss = 0.0640 | Acc = 97.66%
+  Batch 150: Loss = 0.0437 | Acc = 99.22%
+  Batch 200: Loss = 0.0293 | Acc = 99.22%
+  Batch 250: Loss = 0.0153 | Acc = 100.00%
+  Batch 300: Loss = 0.0319 | Acc = 99.22%
+  Batch 350: Loss = 0.0444 | Acc = 99.22%
+  Batch 400: Loss = 0.0359 | Acc = 99.22%
+  Batch 450: Loss = 0.0999 | Acc = 97.66%
+End of Epoch 2 - Avg Loss: 0.0443 | Val Acc: 98.21%
+--- Epoch 3/6 ---
+  Batch   0: Loss = 0.0118 | Acc = 100.00%
+  Batch  50: Loss = 0.0115 | Acc = 100.00%
+  </code></pre>
+
+      <h2>12.5 Better CNN</h2>
+
+      <pre><code>import numpy as np
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Module, Conv, Linear,
+ ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
+from baby.data import MNISTDataset, DataLoader
+from baby.trainer import Trainer
+
+class HierarchicalCNN(Module):
+    def __init__(self):
+        super().__init__()
+
+        # 32 channels * 28 * 28 = 25,088
+        flattened_size = 25088
+
+        self.model = Sequential(
+            # Block 1
+            Conv(in_channels=1, out_channels=16,
+                 kernel_size=3, stride=1, bias=True),
+            ReLU(),
+
+            # Block 2
+            Conv(in_channels=16, out_channels=32,
+                 kernel_size=3, stride=1, bias=True),
+            ReLU(),
+
+            Flatten(),
+
+            Linear(flattened_size, 128),
+            BatchNorm1d(128),
+            ReLU(),
+            Dropout(p=0.5),
+            Linear(128, 10)
+        )
+
+    def forward(self, x):
+        # Transpose: NHWC -&gt; NCHW
+        x_data = x.data if isinstance(x, Tensor) else x
+        x_reshaped = x_data.transpose(0, 3, 1, 2)
+        x = Tensor(x_reshaped)
+
+        return self.model(x)
+
+if __name__ == "__main__":
+    EPOCHS = 6
+    LEARNING_RATE = 0.001
+    BATCH_SIZE = 128
+
+    print("Loading MNIST data...")
+    train_dataset = MNISTDataset("data/train-images-idx3-ubyte.gz",
+             "data/train-labels-idx1-ubyte.gz")
+    test_dataset = MNISTDataset("data/t10k-images-idx3-ubyte.gz",
+                     "data/t10k-labels-idx1-ubyte.gz")
+
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                     shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                 shuffle=False)
+
+    np.random.seed(42)
+    model = HierarchicalCNN()
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+    trainer = Trainer(
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        train_loader=train_loader,
+        val_loader=test_loader
+    )
+
+    print("Starting training ...")
+    trainer.fit(epochs=EPOCHS)
+
+    print("\n" + "="*40)
+    final_acc = trainer.evaluate(loader=test_loader)
+    print(f"Final Test Accuracy: {final_acc*100:.2f}%")
+    print("="*40)
+
+    model.save("improved_cnn_mnist.pt")</code></pre>
+
+      <pre><code>End of Epoch 1 - Avg Loss: 0.1832 | Val Acc: 98.38%
+--- Epoch 2/6 ---
+  Batch   0: Loss = 0.0766 | Acc = 98.44%
+  Batch  50: Loss = 0.0655 | Acc = 99.22%
+  Batch 100: Loss = 0.0280 | Acc = 98.44%
+  Batch 150: Loss = 0.0521 | Acc = 98.44%</code></pre>
+
+      <h2>12.6 Simple CIFAR10</h2>
+
+      <p>First we will write the <strong>CIFAR10Dataset</strong> and then use it to train a model.</p>
+
+      <div class="note">
+        <p><strong>data/</strong> folder consists of :</p>
+        <ul>
+          <li>cifar-10-batches-py</li>
+        </ul>
+      </div>
+
+      <p><strong>FILE</strong> : <strong>babygrad/data.py</strong></p>
+
+      <pre><code>import pickle
+from typing import Optional, List
+import numpy as np
+
+
+def unpickle(file):
+    with open(file, 'rb') as fo:
+        batch = pickle.load(fo, encoding='bytes')
+    batch[b'filenames']=[name.decode('utf-8') for name in batch[b'filenames']]
+    return batch
+
+class CIFAR10Dataset(Dataset):
+    def __init__(self, base_folder: str, train: bool,
+                 p: Optional[int] = 0.5,
+                 transforms: Optional[List] = None):
+
+        self.base_folder = base_folder
+        self.transforms = transforms
+        self.p = p
+        self.train = train
+
+        if train:
+            data_list = []
+            label_list = []
+            for i in range(1, 6):
+                batch = unpickle(f"{base_folder}/data_batch_{i}")
+                data_list.append(batch[b'data'])
+                label_list.extend(batch[b'labels'])
+            self.images = np.vstack(data_list)
+            self.labels = np.array(label_list)
+        else:
+            batch = unpickle(f"{base_folder}/test_batch")
+            self.images = batch[b'data']
+            self.labels = np.array(batch[b'labels'])
+
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            images_flat = np.array(self.images[index]) / 255
+            images_reshaped = images_flat.reshape(-1, 3, 32, 32)
+            labels_batch = np.array(self.labels[index])
+            return (images_reshaped, labels_batch)
+
+
+        sample_image = self.images[index] / 255
+        sample_label = self.labels[index]
+
+        new_sample_image = sample_image.reshape(3, 32, 32)
+
+        if self.transforms:
+            for tform in self.transforms:
+                new_sample_image = tform(new_sample_image)
+
+        return (new_sample_image, sample_label)
+
+    def __len__(self):
+        return len(self.images)</code></pre>
+
+      <pre><code>import numpy as np
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Module, Conv,
+ Linear, ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
+from baby.data import DataLoader,CIFAR10Dataset
+from baby.trainer import Trainer
+
+class CIFAR10CNN(Module):
+    """
+    Conv(3-&gt;16) -&gt; ReLU -&gt; Conv(16-&gt;32) -&gt; ReLU -&gt; Flatten -&gt; Linear -&gt; BN
+         -&gt; ReLU -&gt; Dropout -&gt; Linear
+    """
+    def __init__(self):
+        super().__init__()
+
+        # 32 channels * 32 width * 32 height = 32,768
+        flattened_size = 32768
+
+        self.net = Sequential(
+            Conv(in_channels=3, out_channels=16,
+                     kernel_size=3, stride=1, bias=True),
+            ReLU(),
+
+            Conv(in_channels=16, out_channels=32,
+                 kernel_size=3, stride=1, bias=True),
+            ReLU(),
+            Flatten(),
+
+            Linear(flattened_size, 256),
+            BatchNorm1d(256),
+            ReLU(),
+            Dropout(p=0.4),
+            Linear(256, 10)
+        )
+
+    def forward(self, x):
+        #CIFAR10Dataset already provides (3, 32, 32), (N,C,H,W)
+        # so no transpose needed
+        if not isinstance(x, Tensor):
+            x = Tensor(x)
+        return self.net(x)
+
+if __name__ == "__main__":
+    EPOCHS = 10
+    LEARNING_RATE = 0.001
+    BATCH_SIZE = 64
+
+    print("Loading CIFAR-10 data...")
+    train_dataset = CIFAR10Dataset(base_folder="data/cifar-10-batches-py",
+                     train=True)
+    test_dataset = CIFAR10Dataset(base_folder="data/cifar-10-batches-py",
+                     train=False)
+
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+
+    print(f"Data loaded. Training samples: {len(train_dataset)}")
+
+    np.random.seed(42)
+
+    model = CIFAR10CNN()
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+    trainer = Trainer(
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        train_loader=train_loader,
+        val_loader=test_loader
+    )
+
+    trainer.fit(epochs=EPOCHS)
+
+    print("\n" + "="*40)
+    final_acc = trainer.evaluate(loader=test_loader)
+    print(f"Final CIFAR-10 Test Accuracy: {final_acc*100:.2f}%")
+    print("="*40)
+
+    model.save("cifar10_model.pt")
+    print("Model saved as cifar10_model.pt")</code></pre>
+
+      <pre><code>  Batch 450: Loss = 0.9458 | Acc = 62.50%
+  Batch 500: Loss = 0.6915 | Acc = 79.69%
+  Batch 550: Loss = 0.9032 | Acc = 67.19%
+  Batch 600: Loss = 0.9140 | Acc = 65.62%
+  Batch 650: Loss = 0.8343 | Acc = 70.31%
+  Batch 700: Loss = 0.7392 | Acc = 70.31%
+  Batch 750: Loss = 0.7067 | Acc = 70.31%
+End of Epoch 3 - Avg Loss: 0.7867 | Val Acc: 65.34%</code></pre>
+
+      <p><strong>Validation accuracy</strong> is not improving much.</p>
+
+      <h2>12.7 Simple Resnet</h2>
+
+      <pre><code>import numpy as np
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Module, Conv, Linear, ReLU,
+ Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
+from baby.data import DataLoader,CIFAR10Dataset
+from baby.trainer import Trainer
+
+class MiniResNet(Module):
+    def __init__(self):
+        super().__init__()
+
+        self.stem = Sequential(
+            Conv(3, 32, kernel_size=3, stride=1, bias=True),
+            ReLU()
+        )
+
+        def res_block():
+            return Residual(
+                Sequential(
+                    Conv(32, 32, kernel_size=3, stride=1, bias=True),
+                    ReLU(),
+                    Conv(32, 32, kernel_size=3, stride=1, bias=True)
+                )
+            )
+
+        self.layers = Sequential(
+            res_block(),
+            ReLU(),
+            res_block(),
+            ReLU()
+        )
+
+        # Input: 32 * 32 * 32 = 32,768
+        self.head = Sequential(
+            Flatten(),
+            Linear(32768, 256),
+            BatchNorm1d(256),
+            ReLU(),
+            Dropout(p=0.3),
+            Linear(256, 10)
+        )
+
+    def forward(self, x):
+        if not isinstance(x, Tensor):
+            x = Tensor(x)
+
+        x = self.stem(x)
+        x = self.layers(x)
+        return self.head(x)
+
+if __name__ == "__main__":
+    EPOCHS = 10
+    LEARNING_RATE = 0.0005
+    BATCH_SIZE = 64
+
+    print("Loading CIFAR-10...")
+    train_dataset = CIFAR10Dataset(base_folder="data/cifar-10-batches-py",
+                     train=True)
+    test_dataset = CIFAR10Dataset(base_folder="data/cifar-10-batches-py",
+                     train=False)
+
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                     shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                     shuffle=False)
+
+    np.random.seed(42)
+    model = MiniResNet()
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+    trainer = Trainer(
+        model=model,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        train_loader=train_loader,
+        val_loader=test_loader
+    )
+
+    trainer.fit(epochs=EPOCHS)</code></pre>
+
+      <pre><code>Batch 750: Loss = 0.2567 | Acc = 92.19%
+End of Epoch 9 - Avg Loss: 0.1254 | Val Acc: 67.60%
+--- Epoch 10/10 ---
+  Batch   0: Loss = 0.0681 | Acc = 96.88%
+  Batch  50: Loss = 0.0727 | Acc = 98.44%
+  Batch 100: Loss = 0.0660 | Acc = 98.44%
+  Batch 150: Loss = 0.0567 | Acc = 98.44%
+  Batch 200: Loss = 0.0977 | Acc = 98.44%
+  Batch 250: Loss = 0.1006 | Acc = 95.31%
+  Batch 300: Loss = 0.0590 | Acc = 96.88%
+  Batch 350: Loss = 0.1152 | Acc = 98.44%
+  Batch 400: Loss = 0.1864 | Acc = 93.75%
+  Batch 450: Loss = 0.1204 | Acc = 95.31%
+  Batch 500: Loss = 0.1351 | Acc = 95.31%
+  Batch 550: Loss = 0.2492 | Acc = 92.19%
+  Batch 600: Loss = 0.2578 | Acc = 89.06%
+  Batch 650: Loss = 0.0796 | Acc = 98.44%
+  Batch 700: Loss = 0.1613 | Acc = 92.19%
+  Batch 750: Loss = 0.1807 | Acc = 93.75%
+End of Epoch 10 - Avg Loss: 0.1158 | Val Acc: 68.11%</code></pre>
+
+      <p>Even here it is not that impressive. With just <strong>adding 2 classes</strong> and making no changes to the architecture we will breakout <strong>Validation accuracy &gt; 70</strong>.</p>
+
+      <p><strong>Using Transformations</strong></p>
+
+      <ul>
+        <li><strong>RandomFlipHorizontal</strong></li>
+        <li><strong>RandomCrop</strong></li>
+      </ul>
+
+      <pre><code>class RandomFlipHorizontal:
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img):
+        # img shape: (3, 32, 32) -&gt; (C, H, W)
+        if np.random.rand() &lt; self.p:
+            # Flip along the last axis (Width)
+            return img[:, :, ::-1]
+        return img
+
+class RandomCrop:
+    def __init__(self, padding=4):
+        self.padding = padding
+
+    def __call__(self, img):
+        # img shape: (3, 32, 32)
+        c, h, w = img.shape
+
+        # 1. Pad only the H and W dimensions with zeros
+        padded = np.pad(img, ((0, 0), (self.padding, self.padding),
+                 (self.padding, self.padding)), mode='constant')
+
+        # Pick a random top-left corner
+        top = np.random.randint(0, 2 * self.padding + 1)
+        left = np.random.randint(0, 2 * self.padding + 1)
+
+        # Crop back to original size
+        return padded[:, top:top+h, left:left+w]
+
+
+# Same architecture
+train_transforms = [RandomFlipHorizontal(), RandomCrop(padding=4)]
+train_dataset = CIFAR10Dataset(base_folder="data/cifar-10-batches-py",
+                 train=True, transforms=train_transforms)</code></pre>
+
+      <p>By doing the above <strong>Transformations</strong> Validation accuracy gets past 70.</p>
+
+      <pre><code>  Batch 750: Loss = 0.8504 | Acc = 71.88%
+End of Epoch 5 - Avg Loss: 0.9396 | Val Acc: 70.43%
+--- Epoch 6/10 ---
+  Batch   0: Loss = 1.0325 | Acc = 62.50%
+  Batch  50: Loss = 0.7775 | Acc = 70.31%
+  Batch 100: Loss = 0.7756 | Acc = 73.44%
+  Batch 150: Loss = 0.9060 | Acc = 68.75%
+  Batch 200: Loss = 0.8084 | Acc = 73.44%
+  Batch 250: Loss = 0.8299 | Acc = 65.62%
+  Batch 300: Loss = 0.7393 | Acc = 75.00%
+  Batch 350: Loss = 0.7488 | Acc = 70.31%
+  Batch 400: Loss = 0.6893 | Acc = 79.69%
+  Batch 450: Loss = 0.6177 | Acc = 79.69%
+  Batch 500: Loss = 0.8677 | Acc = 71.88%
+  Batch 550: Loss = 0.8649 | Acc = 67.19%
+  Batch 600: Loss = 0.7627 | Acc = 68.75%
+  Batch 650: Loss = 0.8702 | Acc = 68.75%
+  Batch 700: Loss = 0.6581 | Acc = 76.56%
+  Batch 750: Loss = 0.9947 | Acc = 65.62%
+End of Epoch 6 - Avg Loss: 0.8865 | Val Acc: 71.91%</code></pre>
 
       <div class="nav">
-        <a href="cnn.html">&larr; Convolutional NN</a>
-        <a href="solutions.html">Next: Solutions &rarr;</a>
+        <a href="solutions.html">&larr; Solutions</a>
+        <a href="conclusion.html">Next: Conclusion &rarr;</a>
       </div>
 
       <div class="attribution">

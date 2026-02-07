@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 4: nn — babygrad</title>
+  <title>Chapter 4: nn - babygrad</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 </head>
 <body>
   <div class="container">
@@ -31,150 +33,733 @@
     <main class="content">
       <h1>Chapter 4: nn</h1>
 
-      <h2>3.1 Parameter</h2>
-      <p>A <code>Parameter</code> is a <code>Tensor</code> subclass that automatically sets <code>requires_grad=True</code>, marking tensors as learnable weights. This distinguishes parameters from temporary tensors and enables automatic discovery during optimization.</p>
+      <p>If we want to build a Neural Network we don't want to define each weight manually. In this chapter We will start creating the <code>nn.Module</code> class for various layers.</p>
 
-      <pre><code>class Parameter(Tensor):
-    def __init__(self, data, **kwargs):
-        kwargs['requires_grad'] = True
-        super().__init__(data, **kwargs)</code></pre>
+      <div class="hint">
+        <strong>Note</strong>
+        <p>This is how our <strong>folder structure</strong> currently looks like. In this chapter we will work inside <strong>babygrad/nn.py</strong>.</p>
+<pre><code>project/
+|- .venv/                   # virtual environment
+|- babygrad/                # source code
+|   |- __init__.py
+|   |- ops.py
+|   |- tensor.py
+|- examples/                # Examples
+|   |- simple_mnist.py
+|- tests/                   #tests</code></pre>
+      </div>
 
-      <h2>3.2 Module Base Class</h2>
-      <p>The <code>Module</code> class serves as the foundation for all neural network components. It provides:</p>
+      <h2>4.1 Parameter</h2>
+
+      <div class="hint">
+        <strong>What is a Parameter?</strong>
+        <p>A Parameter is a Tensor containing a model's learnable weights.</p>
+      </div>
+
+      <p>In our <code>Tensor</code> class, we are now adopting the standard convention: <strong>requires_grad</strong> <strong>will default to False</strong>. This is a sensible choice because most tensors are intermediate results, and not tracking their gradients saves memory.</p>
+
+      <p>This means we need an explicit way to mark a tensor as learnable. We do this by wrapping it in the <code>Parameter</code> class, which automatically sets <strong>requires_grad=True</strong></p>
+
+      <p>Why a seperate class? just for something simple?</p>
+
       <ul>
-        <li><strong>Parameter management</strong>: Recursively finds all learnable weights</li>
-        <li><strong>Forward pass</strong>: Abstract method for subclasses to implement</li>
-        <li><strong>Training state</strong>: Tracks whether the model is training or evaluating</li>
+        <li>It makes the code self-documenting. When you see self.weight = Parameter(...) inside a layer, you know immediately that it is a learnable weight, not just a temporary tensor.</li>
+        <li>Easier to find other learnable parameters recursively.</li>
       </ul>
 
-      <p>The chapter distinguishes between training mode (where certain layers behave differently) and evaluation mode, essential for layers like Dropout and BatchNorm.</p>
+      <p><strong>FILE</strong>: <strong>babygrad/nn.py</strong></p>
 
-      <div class="exercise">
-        <h3>Exercise 3.1: Module Base Class</h3>
-        <p>Implement the base Module class with parameter discovery and training mode toggling.</p>
-        <pre><code>class Module:
+<pre><code>from babygrad import Tensor
+class Parameter(Tensor):
+     """
+    A special Tensor that tells a Module it is a learnable parameter.
+    Example:
+        >>>
+        >>> self.some_data = Tensor([1, 2, 3])
+        >>>
+        >>> # A parameter - will be found and trained by the optimizer!
+        >>> self.weights = Parameter(Tensor.randn(10, 5))
+    """
+    def __init__(self, data, *args, **kwargs):
+        # Parameters always require gradients.
+        kwargs['requires_grad'] = True
+        super().__init__(data, *args, **kwargs)</code></pre>
+
+<pre><code>a = Tensor([1,2,3])
+print(a.requires_grad)
+>>>False
+
+b = Parameter(a)
+print(b.requires_grad)
+>>>True </code></pre>
+
+      <p>As you can see <code>Parameter</code> class only does this one thing. It makes a parameter a learnable parameter.</p>
+
+      <p>Lets also write a simple method to get all the parameters . Now that we have a way to mark parameters, we need a way to find them. A model can store parameters in several structures</p>
+
+      <ul>
+        <li>Directly as attributes <strong>(self.weight)</strong></li>
+        <li>Inside a list <strong>(self.layers): [Layer1, Layer2]</strong></li>
+        <li>Inside a dictionary.</li>
+      </ul>
+
+      <p>We need a method to find the <strong>Parameters</strong> of a model.</p>
+
+<pre><code>class Parameter(Tensor):
+    #code
+def _get_parameters(data):
+    params = []
+    if isinstance(data, Parameter):
+        return [data]
+    if isinstance(data, dict):
+        for value in data.values(): #calling _get_parameters recursively
+            params.extend(_get_parameters(value))
+    if isinstance(data, (list, tuple)):
+        for item in data:
+            params.extend(_get_parameters(item))
+    return params</code></pre>
+
+      <h2>4.2 Module</h2>
+
+      <p>After the first 2 chapters you should have done the <strong>examples/simple_mnist</strong>. We used a <code>SimpleNN</code> class for our <code>Model</code>.</p>
+
+<pre><code>class SimpleNN:
+    """A simple two-layer neural network."""
+    def __init__(self, input_size, hidden_size, num_classes):
+        self.W1 = Parameter(np.random.randn(input_size, hidden_size)
+                    .astype(np.float32) / np.sqrt(hidden_size))
+        self.W2 = Parameter(np.random.randn(hidden_size, num_classes)
+                    .astype(np.float32) / np.sqrt(num_classes))
+    def forward(self, x: Tensor) -> Tensor:
+        """Performs the forward pass of the network."""
+        z1 = x @ self.W1 # (8,784) @ (784, 100) -> (8,100)
+        a1 = ops.relu(z1)
+        logits = a1 @ self.W2 #  (8,100) @ (100,10) -> (8,10)
+        return logits
+    def parameters(self):
+        """Returns a list of all model parameters."""
+        return [self.W1, self.W2]</code></pre>
+
+      <p>It worked, but we had to manually define the <code>parameters()</code> method to return a list of weights. If you had a 50-layer network, that list would be impossible to maintain.</p>
+
+      <p>Every layer (Linear, BatchNorm, Conv) shares the same core needs:</p>
+
+      <ul>
+        <li>Manage Parameters: It needs to find every weight inside itself.</li>
+        <li>Forward Pass: It needs a way to process input.</li>
+        <li>Training State: It needs to know if it is currently training or evaluating.</li>
+      </ul>
+
+      <p>We define the <code>Module</code> base class to handle all of this automatically.</p>
+
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
+
+<pre><code>from typing import List
+from babygrad import Tensor
+class Module:
+    """
+    Base class for all neural network layers.
+    Example:
+        class Linear(Module):
+            def __init__(self, in_features, out_features):
+                super().__init__()
+                self.weight = Parameter(np.random.randn(in_features,
+                 out_features))
+
+            def forward(self, x):
+                #pass
+    """
+    def __init__(self):
+        self.training =True
+
+    def parameters(self) -> List[Parameter]:
+        """
+        Returns a list of all parameters in the module and its submodules.
+        """
+        # self.__dict__ is a dictionary containing all the
+         instance's attributes.
+        # We pass it to our helper to recursively find all Parameters.
+        params = _get_parameters(self.__dict__)
+        unique_params = []
+        seen_ids = set()
+        for p in params:
+            if id(p) not in seen_ids:
+                unique_params.append(p)
+                seen_ids.add(id(p))
+        return unique_params
+    def forward(self, *args, **kwargs):
+        """The forward pass logic that must be defined by subclasses."""
+        raise NotImplementedError
+    def __call__(self, *args, **kwargs):
+        """
+        Makes the module callable like a function.
+        Example:
+            >>> model = Linear(10, 2)
+            >>> input_tensor = Tensor.randn(64, 10)
+            >>> output = model(input_tensor)  # This calls model.forward(...)
+        """
+        return self.forward(*args, **kwargs)</code></pre>
+
+      <p><strong>Training vs evaluation</strong></p>
+
+      <p>We have created the Base <code>Module</code> class and we can start creating Layers using this class.</p>
+
+      <p>After training our model, we want to use it for making predictions. This brings up an important distinction between a model's behavior during training and during evaluation (or "inference").</p>
+
+      <p>What happens during training? <strong>During Training</strong>: We feed data, get predictions, calculate loss, and update weights. <strong>During Evaluation (Inference)</strong>: We feed data and get predictions. We do not update weights.</p>
+
+      <p>But is that the only difference? If we just turn off gradient calculations, is that enough?</p>
+
+      <p>Not quite. Certain layers behave fundamentally differently depending on whether you are training or evaluating.</p>
+
+      <div class="hint">
+        <strong>Why an explicit eval() mode is critical</strong>
+        <p>Two of the most common layers that require a separate eval mode are:</p>
+        <p><strong>Dropout</strong>: During training, this layer randomly sets some of its inputs to zero. This is a regularization technique to prevent overfitting. During evaluation, you want your model to use its full learned capacity, so Dropout must be turned off.</p>
+        <p><strong>Batch Normalization</strong>: During training, this layer calculates the mean and variance of the current batch of data to normalize it. It also keeps a running average of these statistics. During evaluation, it stops calculating from the current batch and instead uses its saved running averages to normalize the data.</p>
+      </div>
+
+      <p>To handle this, our Module class will need to keep track of its current state. We will add a <strong>self.training</strong> attribute and two methods, <strong>train() and eval()</strong>, to switch between these states.</p>
+
+      <p>First lets use a method to find all the <code>Modules</code> present.</p>
+
+<pre><code>def _get_modules(obj) -> list['Module']:
+    """
+    A simple recursive function that finds all Module objects within any given
+    object by searching through its attributes, lists, tuples, and dicts.
+    """
+    modules = []
+    if isinstance(obj, Module):
+        return [obj]
+
+    if isinstance(obj, dict):
+        for value in obj.values():
+            modules.extend(_get_modules(value))
+
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            modules.extend(_get_modules(item))
+
+    return modules
+
+class Module:
     def __init__(self):
         self.training = True
-
-    def parameters(self):
-        """Recursively collect all Parameters in this module."""
-        # Your solution here
-        pass
-
+    #code
     def train(self):
-        """Set the module to training mode."""
         self.training = True
-        # Recursively set children to train mode
-
+        for m in _get_modules(self.__dict__):
+            m.training = True
     def eval(self):
-        """Set the module to evaluation mode."""
         self.training = False
-        # Recursively set children to eval mode
+        for m in _get_modules(self.__dict__):
+            m.training = False </code></pre>
 
-    def forward(self, *args, **kwargs):
-        raise NotImplementedError
+      <p>We have also defined a <code>_get_modules</code> which is same as <code>_get_parameters</code>. We can now just call <strong>model.eval()</strong> or <strong>model.train()</strong> to chain states.</p>
 
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)</code></pre>
-      </div>
+      <p>Lets start building layers using <code>Module</code>.</p>
 
-      <h2>3.3 Stateless Layers</h2>
-      <p>Stateless layers have no learnable parameters:</p>
+      <h3>4.2.1 ReLU</h3>
 
-      <h3>ReLU</h3>
-      <p>Applies the Rectified Linear Unit function element-wise: <code>max(0, x)</code></p>
-      <pre><code>class ReLU(Module):
-    def forward(self, x):
-        return x.relu()</code></pre>
+      <p>We will start with simple layers that don't contain any learnable parameters. These layers just apply a mathematical function to the input.</p>
 
-      <h3>Flatten</h3>
-      <p>Reshapes tensors to <code>(batch_size, -1)</code> format, preserving the batch dimension while flattening all other dimensions.</p>
-      <pre><code>class Flatten(Module):
-    def forward(self, x):
-        batch_size = x.shape[0]
-        return x.reshape((batch_size, -1))</code></pre>
+      <ul>
+        <li>ReLU</li>
+        <li>Sigmoid</li>
+        <li>Tanh</li>
+      </ul>
 
-      <h3>Sigmoid and Tanh</h3>
-      <p>Standard activation functions for bounded outputs.</p>
-
-      <h2>3.4 Stateful Layers</h2>
-      <p>Stateful layers contain learnable parameters:</p>
-
-      <h3>Linear</h3>
-      <p>Implements a fully connected layer: <code>output = x @ Weight + bias</code></p>
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
 
       <div class="exercise">
-        <h3>Exercise 3.2: Linear Layer</h3>
-        <pre><code>class Linear(Module):
-    def __init__(self, in_features, out_features, bias=True):
-        super().__init__()
-        self.weight = Parameter(...)  # Shape: (in_features, out_features)
-        self.bias = Parameter(...) if bias else None  # Shape: (out_features,)
+        <strong>Exercise 4.1</strong>
+        <p>Lets write the <strong>ReLu</strong> class.</p>
+<pre><code>class ReLU(Module):
+    def forward(self, x: Tensor):
+        """
+    Applies the Rectified Linear Unit (ReLU) function element-wise.
+    Example:
+        model = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU()  # Apply activation after the linear layer
+        )
+    """
+    #your solution
 
-    def forward(self, x):
-        # Your solution here
-        pass</code></pre>
+
+class Tanh(Module):
+    def forward(self, x: Tensor):
+        #your code
+class Sigmoid(Module):
+    def forward(self,x: Tensor):
+        #your code     </code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>Use methods from <strong>ops.py</strong></p>
+        </div>
       </div>
 
-      <h3>Sequential</h3>
-      <p>Chains modules together automatically, passing the output of each module as input to the next.</p>
-      <pre><code>class Sequential(Module):
+      <h3>4.2.2 Flatten</h3>
+
+      <p>What does <code>Flatten</code> do?</p>
+
+      <p>Suppose there is a matrix of shape (2,3,4,5). Flatten will just reshape the matrix into (2,60). Flatten is extremely useful in <code>CNN</code>.</p>
+
+      <p><strong>FILE</strong> : <strong>baby/nn.py</strong></p>
+
+      <div class="exercise">
+        <strong>Exercise 4.2</strong>
+        <p>Lets write the <strong>Flatten</strong> class.</p>
+<pre><code>class Flatten(Module):
+    """
+    Flattens a tensor by reshaping it to `(batch_size, -1)`.
+    Example:
+        # A CNN might produce a feature map of shape (32, 64, 7, 7)
+        # (batch_size, channels, height, width)
+        model = nn.Sequential(
+            nn.Conv2d(...),
+            nn.ReLU(),
+            nn.Flatten(), # Reshapes output to (32, 64 * 7 * 7) = (32, 3136)
+            nn.Linear(3136, 10)
+        )
+    """
+    def forward(self, x: Tensor) -> Tensor:
+        #your code </code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>Can we use <code>reshape</code> method from <code>ops</code>?</p>
+        </div>
+      </div>
+
+      <p>Till now in the exercises we didn't have a need to use <code>Parameter</code> to initialize anything.</p>
+
+      <h3>4.2.3 Linear</h3>
+
+      <p>So far, the layers we've built: <code>ReLU</code>, <code>Flatten</code>, <code>Sigmoid</code> have all been stateless. They perform a fixed mathematical operation but don't have any memory or learnable parts.</p>
+
+      <p>The most simplest layer is the <code>Linear</code> layer. It multiplies the <strong>input</strong> with <code>weight</code> and adds <code>bias</code>. The Linear layer (also called a "Dense" or "Fully Connected" layer) maintains state in the form of <code>weight</code> and <code>bias</code>. These are the learnable parameters that the model "adjusts" during training to get the right answer.</p>
+
+      <p>\[
+    output = x @ Weight + bias
+\]</p>
+
+      <p><strong>FILE</strong> : <strong>baby/nn.py</strong></p>
+
+      <ul>
+        <li>Wrap <code>self.weight</code> and <code>self.bias</code> with <code>Parameter</code>.</li>
+      </ul>
+
+      <div class="exercise">
+        <strong>Exercise 4.3</strong>
+        <p>Lets write the <strong>Linear</strong> class.</p>
+<pre><code>class Linear(Module):
+    """
+    Applies a linear transformation to the incoming data: y = xA^T + b.
+
+    Args:
+        in_features (int): Size of each input sample.
+        out_features (int): Size of each output sample.
+        bias (bool, optional): If set to False,
+         the layer will not learn  bias.
+    Shape:
+        - Input: `(batch_size, *, in_features)` where `*`
+          means any number of additional dimensions.
+        - Output: `(batch_size, *, out_features)` where
+          all but the last dimension are the same shape as the input.
+
+    Attributes:
+        weight (Parameter): The learnable weights of the module of shape
+                            `(in_features, out_features)`.
+        bias (Parameter):   The learnable bias of the module
+                             of shape `(out_features,)`.
+    """
+    def __init__(self, in_features: int, out_features: int, bias: bool
+                , device: Any | None = None, dtype: str = "float32"):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+
+        #your code
+
+    def forward(self, x: Tensor) -> Tensor:
+        # Note: x.shape is (batch_size, in_features)
+        # self.weight.shape is (in_features, out_features)
+        # The result should have shape (batch_size, out_features)
+      </code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>Make sure <code>self.bias</code> is broadcasted before adding.</p>
+        </div>
+      </div>
+
+      <h3>4.2.4 Sequential</h3>
+
+      <p>If you have a model with many different layers like :</p>
+
+<pre><code>class MygoodNetwork(Module):
+    def __init__(self):
+        super().__init__()
+        self.layer1 = Linear(784, 128)
+        self.activation1 = ReLU()
+        self.layer2 = Linear(128, 10)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.activation1(x)
+        x = self.layer2(x)
+        return x</code></pre>
+
+      <p>This works, but the forward method is just a repetitive chain of calls. If we had 10 layers, this would become very verbose. Can we simplify this? Can we just "stack" the layers and have them run in order automatically? The Sequential class solves this by acting as a container. It takes a list of modules and handles the "passing" for you: the output of layer 1 automatically becomes the input of layer 2</p>
+
+      <p>We will write the <code>Sequential</code> class. That takes <strong>modules</strong> as input. It takes a sequence of modules and chains them together for you.</p>
+
+      <div class="exercise">
+        <strong>Exercise 4.4</strong>
+        <p>Lets write the <strong>Sequential</strong> class.</p>
+<pre><code>class Sequential(Module):
+    A container that chains a sequence of modules together.
+    Example:
+        # A simple 2-layer MLP for MNIST
+        model = nn.Sequential(
+            nn.Linear(784, 128),
+            nn.ReLU(),
+            nn.Linear(128, 10)
+        )
+        logits = model(input_tensor)
+    """
     def __init__(self, *modules):
         super().__init__()
         self.modules = modules
 
-    def forward(self, x):
-        for module in self.modules:
-            x = module(x)
-        return x</code></pre>
+    def forward(self, x: Tensor) -> Tensor:
+        #your code
+        #for each module pass 'x'.
+        </code></pre>
+      </div>
 
-      <h3>Residual</h3>
-      <p>Creates skip connections implementing <code>f(x) + x</code>, allowing gradients to flow directly through the network.</p>
+      <h3>4.2.5 Residual</h3>
 
-      <h2>3.5 Regularization and Normalization</h2>
+      <p>We've seen that <code>Sequential</code> is great for stacking layers. But as we stack more and more layers, the network can start to "forget" the original input. The <strong>input</strong> has to pass through so many layers that it can get lost.</p>
 
-      <h3>Dropout</h3>
-      <p>Randomly sets some input elements to zero with probability p during training. This helps prevent overfitting by forcing the network to learn redundant representations.</p>
+      <p>What if we don't always have to pass our input through our network? What if we could skip some layers? Instead of forcing the input \(x\) to be transformed by every single layer, can we create a way? to let the input bypass the layers and add itself back to the result at the end.</p>
+
+      <p>\[output = f(x) + x\]</p>
+
+      <p>Yes! This is called a Residual Connection. It allows gradients to flow through the "shortcut" path during backpropagation, making it much easier to train very deep networks. The good thing about using <code>Residual</code> is it won't add additional parameters and complexity to our network.</p>
 
       <div class="exercise">
-        <h3>Exercise 3.3: Dropout</h3>
-        <pre><code>class Dropout(Module):
-    def __init__(self, p=0.5):
+        <strong>Important</strong>
+<pre><code>class Residual(Module):
+    """
+    Creates a residual connection block, which implements `f(x) + x`.
+    Example:
+        # A simple residual block
+        main_path = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU()
+        )
+        res_block = nn.Residual(main_path)
+        output = res_block(input_tensor_of_shape_64)
+    """
+    def __init__(self, fn: Module):
+        super().__init__()
+        self.fn = fn
+    def forward(self, x: Tensor) -> Tensor:
+        return self.fn(x) + x
+    </code></pre>
+      </div>
+
+      <h3>4.2.6 Dropout</h3>
+
+      <div class="hint">
+        <strong>What is overfitting?</strong>
+        <p>A model becomes too good at memorizing the training data. It learns the specific details and noise of the training set so well that it fails to generalize to new, unseen data.</p>
+      </div>
+
+      <p>That means the network is dependent on very few specific nodes for the output and the other nodes are not being used at their level.</p>
+
+      <p>In a quiz competition, if all team members are dependent on alice for correct answers, the team members will have no role to play at all.</p>
+
+      <p>So what shall we do?</p>
+
+      <p>Remove alice or remove everyone else?</p>
+
+      <p>Sometimes alice sit out , sometimes the some other person sits out. So that everyone starts performing instead of depending on others.</p>
+
+      <p>To prevent this, we use Dropout. We force Alice (and everyone else) to "sit out" at random during training. This forces every one to learn useful features on its own. This is what <code>Dropout</code> does.</p>
+
+      <p><strong>During training, some neurons are temporarily turned off at random. And during testing everyone participates.</strong></p>
+
+      <div class="exercise">
+        <strong>Exercise 4.5</strong>
+        <p>Lets write the <strong>Dropout</strong> class.</p>
+<pre><code>class Dropout(Module):
+    """
+    A regularization layer to help prevent overfitting.
+
+    During training (`.train()` mode), it randomly sets some input
+    elements to zero with a probability of `p`. The remaining
+    elements are scaled up by `1 / (1 - p)`.
+
+    During evaluation (`.eval()` mode), this layer does nothing.
+
+    Example:
+        model = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(p=0.2) # Drop 20% of activations during training
+        )
+    """
+    def __init__(self, p: float = 0.5):
         super().__init__()
         self.p = p
 
-    def forward(self, x):
-        if self.training:
-            # Create random mask and scale by 1/(1-p)
-            # Your solution here
-            pass
-        return x</code></pre>
+    def forward(self, x: Tensor) -> Tensor:
+        #your code
+        # create a Tensor mask of binary elements that are random.(use Tensor.randb)
+        # multiply this mask with x and divide with (1-self.p)
+</code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>If <strong>self.training=False</strong> return <code>x</code>.</p>
+        </div>
       </div>
 
-      <h3>LayerNorm1d</h3>
-      <p>Normalizes over feature dimensions, stabilizing training by ensuring consistent activation distributions.</p>
+      <h3>4.2.7 LayerNorm</h3>
 
-      <h3>BatchNorm1d</h3>
-      <p>Normalizes over batch dimensions with running statistics. During training, it uses batch statistics; during evaluation, it uses accumulated running statistics.</p>
+      <div class="hint">
+        <strong>What is an Activation?</strong>
+        <p>An activation is the numerical output of a neuron.</p>
+      </div>
 
-      <h2>3.6 Loss Functions</h2>
+      <div class="hint">
+        <strong>What is Mean?</strong>
+        <p>The Mean is the average value of a set of numbers.</p>
+      </div>
 
-      <h3>MSELoss</h3>
-      <p>Calculates the average of squared differences between predictions and targets:</p>
-      <pre><code>loss = mean((predictions - targets)^2)</code></pre>
+      <div class="hint">
+        <strong>What is Variance?</strong>
+        <p>Variance measures how spread out a set of numbers are from its mean.</p>
+      </div>
 
-      <h3>SoftmaxLoss</h3>
-      <p>Implements cross-entropy loss using the logsumexp trick for numerical stability. This combines softmax normalization with negative log-likelihood.</p>
+      <div class="hint">
+        <strong>What is a Distribution?</strong>
+        <p>A distribution describes how the values in a set of data are spread out.</p>
+      </div>
+
+      <div class="hint">
+        <strong>What is Internal Covariate Shift?</strong>
+        <p>The change in the distribution of a layer's inputs during training.</p>
+      </div>
+
+      <p>In deep networks which consists of many layers, <strong>it is important for input distribution to stay stable.</strong></p>
+
+      <p>Why?** Why should the input distribution stay stable?**</p>
+
+      <p>If it is not stable, which means learning process for each layer becomes harder.</p>
+
+      <p>Why does it becomes harder? Because each layer is trying to learn from unstable inputs.</p>
+
+      <p>So what can we do ? We need to stablize these inputs. Thats what we will do in <code>LayerNorm</code>.</p>
+
+      <p>\[
+\text{normalized activation}_i = \frac{\text{activation}_i - \text{mean of activations}}{\text{standard deviation of activations} + \epsilon}
+\]</p>
+
+      <p>\[
+\text{output}_i = \text{scale parameter} \times \text{normalized activation}_i + \text{shift parameter}
+\]</p>
+
+      <p>\[
+x_{\text{norm}_i} = \frac{x_i - \text{mean}(x)}{\text{std}(x) + \epsilon}
+\]</p>
+
+      <p>\[
+\text{output}_i = \text{weight} \times x_{\text{norm}_i} + \text{bias}
+\]</p>
+
+      <div class="hint">
+        <strong>Reference: The Original LayerNorm Paper</strong>
+        <p>Title: Layer Normalization Link: https://arxiv.org/abs/1607.06450</p>
+      </div>
 
       <div class="exercise">
-        <h3>Exercise 3.4: SoftmaxLoss</h3>
-        <pre><code>class SoftmaxLoss(Module):
-    def forward(self, logits, targets):
-        # Use logsumexp for numerical stability
-        # logsumexp = log(sum(exp(logits)))
-        # loss = logsumexp - logits[targets]
-        # Your solution here
-        pass</code></pre>
+        <strong>Exercise 4.6</strong>
+        <p>Lets write the <strong>LayerNorm1d</strong> class.</p>
+<pre><code>class LayerNorm1d(Module):
+    def __init__(self,dim: int, eps: float=1e-5,device=None,
+                 dtype="float32"):
+        super().__init__()
+        self.dim = dim
+        self.eps = eps
+        self.weight = Parameter(Tensor.ones(dim, dtype=dtype))
+        self.bias = Parameter(Tensor.zeros(dim, dtype="float32"))
+
+    def forward(self,x):
+        # x (batch_size,dim;)
+        # your code </code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>You can use <code>summation</code>, <code>reshape</code>, <code>broadcast_to</code> from ops.</p>
+          <p>Remember to normalize over the features dimension (the last dimension of the input x). Keep track of the tensor shapes at each step!</p>
+        </div>
+      </div>
+
+      <h3>4.2.8 BatchNorm</h3>
+
+      <p>LayerNorm works on the features axis whereas <code>BatchNorm</code> works on batches(axis=0). It transforms the data so that input has a mean of 0 and a standard deviation of 1 over the <strong>batch</strong> dimension.</p>
+
+      <div class="hint">
+        <strong>Tip</strong>
+        <p>What is a Batch? A batch is a small group of data samples (like 32 images) that the network looks at all at once before updating its weights.</p>
+      </div>
+
+      <p>\[
+\text{mean} = \frac{1}{N} \sum_{i=1}^{N} x_i
+\]</p>
+
+      <p>\[
+\text{var} = \frac{1}{N} \sum_{i=1}^{N} (x_i - \text{mean})^2
+\]</p>
+
+      <p>\[
+x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
+\]</p>
+
+      <p>\[
+\text{output}_i = \text{weight} \times x_{\text{norm}_i} + \text{bias}
+\]</p>
+
+      <p><strong>Training vs Evaluation</strong></p>
+
+      <p>During the training phase, we maintain 2 buffers <code>running_mean</code> and <code>running_var</code>. These are not <code>Parameters</code> but buffers that store the <strong>mean and variance</strong>.</p>
+
+      <p>During <strong>training</strong> we use the <strong>mean</strong> and <strong>variance</strong> of the current batch to normalize the data. We update our buffers using momentum.</p>
+
+      <p>\[\text{running\_mean} = (1 - \text{momentum}) \times \text{running\_mean} + \text{momentum} \times \text{batch\_mean}\]</p>
+
+      <p>\[\text{running\_var} = (1 - \text{momentum}) \times \text{running\_var} + \text{momentum} \times \text{batch\_var}\]</p>
+
+      <p>But during <strong>training=False</strong> we do not calculate new <code>running_mean</code> and <code>running_var</code> but use the buffers that we created during the training phase .</p>
+
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
+
+      <div class="exercise">
+        <strong>Exercise 4.7</strong>
+        <p>Lets write the <strong>BatchNorm</strong> class.</p>
+<pre><code>class BatchNorm1d(Module):
+    def __init__(self, dim: int, eps: float = 1e-5, momentum: float = 0.1,
+             device: Any | None = None, dtype: str = "float32") -> None:
+        super().__init__()
+        self.dim = dim
+        self.eps = eps
+        self.momentum = momentum
+        self.weight = Parameter(Tensor.ones(dim, dtype=dtype))
+        self.bias = Parameter(Tensor.zeros(dim,  dtype=dtype))
+        self.running_mean = Tensor.zeros(dim, dtype=dtype)
+        self.running_var = Tensor.ones(dim, dtype=dtype)
+
+    def forward(self, x: Tensor) -> Tensor:
+        #x.shape (bs,dim)
+        if self.training:
+            self.running_mean.data = (1 - self.momentum) *
+                    self.running_mean.data + self.momentum * mean.data
+            self.running_var.data = (1 - self.momentum) *
+                        self.running_var.data + self.momentum * var.data
+        else:
+            mean_to_use = self.running_mean
+            var_to_use = self.running_var
+        </code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>You can use <code>summation</code>, <code>reshape</code>, <code>broadcast_to</code> from ops.</p>
+          <p>Remember to normalize over the batch dimension (the first dimension of the input x). Keep track of the tensor shapes at each step!</p>
+        </div>
+      </div>
+
+      <h3>4.2.9 MSE Loss</h3>
+
+      <p>It is a Standard loss function for Regression tasks. It calculates the average of the squared differences between the predicted values and the actual targets.</p>
+
+      <p>\[\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (y_{\text{pred}_i} - y_{\text{target}_i})^2\]</p>
+
+<pre><code>class MSELoss(Module):
+    def forward(self, pred: Tensor, target: Tensor) -> Tensor:
+        """
+        Calculates the Mean Squared Error.
+        """
+        diff = pred - target
+        sq_diff = diff * diff
+        return sq_diff.sum() / Tensor(target.data.size)</code></pre>
+
+      <h3>4.2.10 SoftmaxLoss</h3>
+
+      <p>Lets take a single image and the image could be [Cat,Dog,Elephant]. Our image is a <strong>Dog</strong>. We take this image and give it to our model. And the model gives us the output scores:</p>
+
+      <p>\[logits = [2.0, 5.0, 1.0]\]</p>
+
+      <p>Model is sure it is a <strong>Dog</strong>.</p>
+
+      <p>Lets turn our <code>true</code> label(Dog) into a <code>one_hot</code> vector.</p>
+
+      <p>\[y\_one\_hot = [0, 1, 0]\]</p>
+
+      <p>Lets multiply the <strong>logits</strong> with <strong>one_hot</strong></p>
+
+      <p>\[[2.0, 5.0, 1.0] \times [0, 1, 0] = [0, 5.0, 0]\]</p>
+
+      <p>\[\text{sum}([0, 5.0, 0]) = \mathbf{5.0}\]</p>
+
+      <p>Lets do <code>logsumexp</code> for the for the logits.</p>
+
+      <p>\[\text{logsumexp}([2.0, 5.0, 1.0]) = \ln(e^{2.0} + e^{5.0} + e^{1.0})\]</p>
+
+      <p>We get nearly = 5.066</p>
+
+      <p>Now lets find the loss:</p>
+
+      <p>\[\text{Loss} = logsumexp - h_y\]
+\[\text{Loss} = 5.066 - 5.0 = \mathbf{0.066}\]</p>
+
+      <p>The loss is less, that means the model correctly predicted our image.</p>
+
+      <p><strong>We will use the <code>max</code> trick , so that the exponents don't explode.</strong></p>
+
+      <p>\[\text{LogSumExp}(x) = \max(x) + \ln \left( \sum_{i} e^{x_i - \max(x)} \right)\]</p>
+
+      <p>Lets figure out how to do <strong>backward</strong> pass for this.</p>
+
+      <p>Using the chain rule on \(f(x) = \ln(\sum e^{x_i})\), the derivative with respect to \(x_i\) is:</p>
+
+      <p>\[\frac{\partial \text{LSE}}{\partial x_i} = \frac{e^{x_i}}{\sum_j e^{x_j}}\]</p>
+
+      <p>Does it look like a <strong>Softmax</strong> function?</p>
+
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
+
+      <div class="exercise">
+        <strong>Exercise 4.8</strong>
+        <p>Lets write the <strong>SoftmaxLoss</strong> class.</p>
+<pre><code>class SoftmaxLoss(Module):
+    def forward(self, logits, y):
+        """
+        Calculates the softmax cross-entropy loss.
+        Args:
+            logits: A tensor of shape (batch_size, num_classes)
+                containing the model's raw output.
+            y: A list or numpy array of integers (batch_size,)
+                 containing the true class labels.
+        """
+        n, k = logits.shape
+        y_one_hot = Tensor.one_hot(y, k, requires_grad=False)
+        logsumexp_val = ops.logsumexp(logits, axes=(1,))
+        h_y = (logits * y_one_hot).sum(axes=(1,))
+
+        return (logsumexp_val - h_y).sum() / n</code></pre>
+        <div class="hint">
+          <strong>Note</strong>
+          <p>You should write <code>ops.logsumexp</code> instead of doing it here.</p>
+        </div>
       </div>
 
       <div class="nav">

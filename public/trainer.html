@@ -31,15 +31,11 @@
     <main class="content">
       <h1>Chapter 9: Trainer</h1>
 
-      <p>This chapter introduces a <strong>Trainer class</strong> that encapsulates the repetitive boilerplate code found in machine learning training loops. Rather than writing the same training logic repeatedly, developers can leverage this abstraction.</p>
+      <p>For any training loop we will write something like this:</p>
 
-      <h2>Problem Statement</h2>
-      <p>Typical training loops follow a consistent pattern:</p>
-
-      <pre><code>model = MyModel()
-optimizer = MyOptimizer()
+      <pre><code>model = Mymodel()
+optimizer = myOptimizer()
 dataloader = MyDataloader()
-
 for epoch in range(10):
     for batch in dataloader:
         optimizer.zero_grad()
@@ -48,147 +44,92 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()</code></pre>
 
-      <p>The repetitive nature of this structure across projects motivates creating a reusable <strong>Trainer</strong> abstraction.</p>
+      <p>This works fine, but it becomes repetitive. Every model and every experiment requires writing the same boilerplate. To make our workflow cleaner, we can wrap this logic inside a <strong>Trainer</strong> class.</p>
 
-      <h2>Required Components</h2>
-      <p>The Trainer class needs:</p>
+      <div class="note">
+        <p><strong>Note:</strong> This is how our <strong>folder structure</strong> currently looks like. In this chapter we will work inside <strong>babygrad/trainer.py</strong>.</p>
+        <pre><code>project/
+├─ .venv/
+├─ babygrad/
+|   ├─ trainer.py
+│   ├─ __init__.py
+│   ├─ data.py
+│   ├─ init.py
+│   ├─ ops.py
+│   ├─ tensor.py
+│   ├─ nn.py
+│   └─ optim.py
+├─ examples/
+│   └─ simple_mnist.py
+└─ tests/</code></pre>
+      </div>
+
+      <p>What does the <code>Trainer</code> class need? It needs everything that is used in the training loops.</p>
+
       <ul>
         <li>Model</li>
         <li>Loss function</li>
         <li>Optimizer</li>
-        <li>Training dataloader</li>
-        <li>Validation dataloader (optional)</li>
+        <li>Dataloader</li>
       </ul>
 
-      <h2>Usage Pattern</h2>
-      <pre><code>trainer = Trainer(
-    model,
-    optimizer,
-    loss_fn,
-    train_loader,
-    val_loader=test_loader
-)
+      <pre><code>trainer=Trainer(model,optimizer,loss_fn,train_loader,val_loader=test_loader)
 
 print("Starting Training...")
 trainer.fit(EPOCHS)</code></pre>
 
+      <p><strong>File</strong> : <strong>babygrad/trainer.py</strong></p>
+
       <div class="exercise">
-        <h3>Exercise 8.1: Trainer Implementation</h3>
-        <p>Implement two methods in <code>babygrad/trainer.py</code>:</p>
+        <h3>Exercise 9.1</h3>
+        <p>Lets write the <strong>fit</strong> method inside <strong>Trainer</strong> class.</p>
+        <pre><code>from babygrad.tensor import Tensor
 
-        <h4>fit() method requirements:</h4>
-        <ul>
-          <li>Iterate through training batches</li>
-          <li>Zero gradients</li>
-          <li>Execute forward pass</li>
-          <li>Calculate loss</li>
-          <li>Execute backward pass</li>
-          <li>Update parameters</li>
-        </ul>
-
-        <h4>assess() method requirements:</h4>
-        <ul>
-          <li>Set model to assessment mode (not training)</li>
-          <li>Loop through validation data</li>
-          <li>Perform forward pass only</li>
-          <li>Compare predictions using argmax</li>
-          <li>Calculate accuracy metrics</li>
-        </ul>
-
-        <pre><code>class Trainer:
-    def __init__(self, model, optimizer, loss_fn, train_loader, val_loader=None):
+class Trainer:
+    def __init__(self, model, optimizer, loss_fn, train_loader,
+                 val_loader=None):
         self.model = model
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.train_loader = train_loader
         self.val_loader = val_loader
 
-    def fit(self, epochs):
+    def fit(self, epochs: int):
         """
-        Train the model for a specified number of epochs.
-
-        Args:
-            epochs: Number of training epochs
+        Runs the training loop for the specified number of epochs.
         """
         for epoch in range(epochs):
-            self.model.train()
+            self.model.train() # Set mode to training
+
             total_loss = 0
 
-            for batch_x, batch_y in self.train_loader:
-                # Zero gradients
-                self.optimizer.zero_grad()
+            # Your solution here:
+            # 1. Iterate over self.train_loader
+            # 2. Get batch data (x, y)
+            # 3. Zero Gradients
+            # 4. Forward Pass
+            # 5. Compute Loss
+            # 6. Backward Pass
+            # 7. Optimizer Step
 
-                # Forward pass
-                # Your solution here
+            print(f"Epoch {epoch+1} Done.")
 
-                # Calculate loss
-                # Your solution here
-
-                # Backward pass
-                # Your solution here
-
-                # Update parameters
-                # Your solution here
-
-                total_loss += loss.data
-
-            avg_loss = total_loss / len(self.train_loader)
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
-
-            if self.val_loader:
-                self.assess()
-
-    def assess(self):
+    def evaluate(self, loader=None):
         """
-        Assess the model on the validation set.
-
-        Returns:
-            Accuracy as a float
+        Calculates accuracy on the validation set.
         """
-        self.model.set_mode_inference()  # not training mode
-        correct = 0
-        total = 0
-
-        for batch_x, batch_y in self.val_loader:
-            # Forward pass only
-            # Your solution here
-
-            # Get predictions using argmax
-            # Your solution here
-
-            # Count correct predictions
-            # Your solution here
-            pass
-
-        accuracy = correct / total
-        print(f"Validation Accuracy: {accuracy:.4f}")
-        return accuracy</code></pre>
+        target_loader = loader if loader is not None else self.val_loader
+        if target_loader is None:
+            return 0.0
+        # Hint:
+        # 1. Set model to evaluation mode: self.model.eval()
+        # 2. Loop over self.val_loader
+        # 3. Forward pass only (no backward)
+        # 4. Compare predictions to true labels(use argmax(axis=1))
+        # 5. Sum the correct predictions and calculate the average.
+        pass
+</code></pre>
       </div>
-
-      <h2>Complete Example</h2>
-      <pre><code>from babygrad import nn, optim
-from babygrad.data import MNISTDataset, DataLoader
-from babygrad.trainer import Trainer
-
-# Define model
-model = nn.Sequential(
-    nn.Flatten(),
-    nn.Linear(784, 256),
-    nn.ReLU(),
-    nn.Linear(256, 10)
-)
-
-# Setup training
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-loss_fn = nn.SoftmaxLoss()
-
-# Create data loaders
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64)
-
-# Train
-trainer = Trainer(model, optimizer, loss_fn, train_loader, val_loader=test_loader)
-trainer.fit(epochs=10)</code></pre>
 
       <div class="nav">
         <a href="saving.html">&larr; Model Persistence</a>

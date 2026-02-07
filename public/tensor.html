@@ -50,6 +50,17 @@
 
       <p>This "history" is called the <strong>computation graph</strong>, and it's what makes automatic differentiation possible (which we'll cover in Chapter 3).</p>
 
+      <div class="hint">
+        <strong>What is a Computation Graph?</strong><br>
+        A graph that shows:
+        <ul>
+          <li>Numbers (Tensors) as nodes</li>
+          <li>Operations (add, multiply, etc.) as nodes</li>
+          <li>Edges showing how data flows from inputs → operations → outputs</li>
+        </ul>
+        When you do <code>c = a + b</code>, the graph records: "c was created by adding a and b." Later, when computing gradients, we walk backwards through this graph.
+      </div>
+
       <h2>Tensor Attributes</h2>
 
       <p>Every Tensor stores these attributes:</p>
@@ -118,32 +129,32 @@ np.array([[1, 2], [3, 4]]) # nested list → 2D array</code></pre>
       <pre><code>import numpy as np
 
 class Tensor:
-    def __init__(self, array, *, device=None, dtype="float32", requires_grad=True):
+    def __init__(self, input, *, device=None, dtype="float32", requires_grad=True):
         """
         Create a new tensor.
 
         Args:
-            array: Array-like data (list, numpy array, or another Tensor)
+            input: Array-like input (list, numpy array, or another Tensor)
             device: Device placement (currently ignored, CPU only)
             dtype: Data type for the array
             requires_grad: Whether to track gradients for this tensor
         """
         # Step 1: Normalize the input to a numpy array
 
-        if isinstance(array, Tensor):
+        if isinstance(input, Tensor):
             # Case 1: Unwrap the Tensor
-            array = _____
+            input = _____
 
-        elif isinstance(array, np.ndarray):
+        elif isinstance(input, np.ndarray):
             # Case 2: Already a numpy array
             _____
 
         else:
             # Case 3: Something else (list, scalar, etc.)
-            array = _____
+            input = _____
 
         # Store with the correct dtype
-        self.data = array.astype(dtype)
+        self.data = input.astype(dtype)
 
         # Initialize remaining attributes
         self.requires_grad = _____
@@ -160,96 +171,118 @@ isinstance([1, 2, 3], np.ndarray) # False
 isinstance(np.array([1,2,3]), np.ndarray)  # True</code></pre>
       </div>
 
-      <h2>Exercise 2.2: Properties</h2>
+      <h2>2.2 Data operations</h2>
 
-      <p>These are simple one-liners. They expose information about the underlying numpy array.</p>
+      <p>Now that we have the basic Tensor class, let's extend it by adding a few <strong>simple methods</strong> that are helpful for working with tensors. For now, we'll focus on:</p>
 
-      <p>Implement these properties:</p>
       <ul>
-        <li><code>shape</code> — return the dimensions, like <code>(3,)</code> or <code>(2, 4)</code></li>
-        <li><code>ndim</code> — return the number of dimensions (1 for vector, 2 for matrix, etc.)</li>
-        <li><code>size</code> — return the total number of elements</li>
-        <li><code>device</code> — return the device location (stored in <code>self._device</code>)</li>
+        <li>Shape</li>
+        <li>Dtype</li>
+        <li>Device</li>
+        <li>ndim</li>
+        <li>Size</li>
       </ul>
 
-      <pre><code>@property
-def shape(self):
-    # YOUR CODE HERE
+      <p>These are simple properties of the Tensor class.</p>
 
-@property
-def ndim(self):
-    # YOUR CODE HERE
+      <pre><code>class Tensor:
+    @property
+    def shape(self):
+        """Shape of the tensor."""
+        return self.data.shape
 
-@property
-def size(self):
-    # YOUR CODE HERE
+    @property
+    def dtype(self):
+        """Data type of the tensor."""
+        return self.data.dtype
 
-@property
-def device(self):
-    # YOUR CODE HERE</code></pre>
+    @property
+    def ndim(self):
+        """Number of dimensions."""
+        return self.data.ndim
+
+    @property
+    def size(self):
+        """Total number of elements."""
+        return self.data.size
+
+    @property
+    def device(self):
+        """Device where tensor lives."""
+        return self._device</code></pre>
+
+      <hr>
+
+      <p>Now that we have basic properties let's focus on <strong>getting the actual data stored in a Tensor</strong>.</p>
+
+      <p>We'll start with a simple method: <strong><code>numpy()</code></strong>.</p>
+
+      <ul>
+        <li>The purpose of <code>numpy()</code> is to <strong>extract the raw NumPy array</strong> from a Tensor.</li>
+        <li>This is useful when you want to inspect, visualize, or use the data with other Python libraries without screwing anything in the graph.</li>
+      </ul>
+
+      <pre><code>class Tensor:
+    # existing code...
+
+    def numpy(self):
+        """
+        Return the data as a NumPy array (detached from the computation graph).
+        This returns a copy, so modifying the result will not affect
+        the tensor's data.
+
+        Examples:
+            >>> x = Tensor([1, 2, 3])
+            >>> y = x + 1   # y is still a Tensor, part of the graph
+            >>> z = x.numpy() + 1  # z is a NumPy array, not part of the graph
+
+        Returns:
+            np.ndarray: A copy of the tensor's data as a NumPy array.
+        """
+        return self.data.copy()</code></pre>
+
+      <hr>
+
+      <p>Sometimes we want a <strong>clone of a Tensor</strong> that has the same data but is <strong>not connected to the computation graph</strong>.</p>
+
+      <p>This is useful when we want to inspect or manipulate the data without affecting the graph. For example, during training you might want to log the current loss value for monitoring, but you don't need gradients for that—you just want the number. Or you might want to "freeze" part of a model so gradients don't flow through it.</p>
+
+      <p>The <code>detach()</code> method creates a new <strong>Tensor</strong> with the same underlying data as the original <code>Tensor</code>.</p>
+
+      <pre><code>class Tensor:
+    def detach(self):
+        """
+        Creates a new Tensor with same data but no gradient tracking.
+        Useful when you want to use values without building
+        computation graph.
+
+        Returns:
+            Tensor: New tensor with requires_grad=False
+
+        Example:
+            >>> x = Tensor([1, 2, 3], requires_grad=True)
+            >>> y = x.detach()  # y doesn't track gradients
+            >>> z = y * 2       # This operation won't be in graph
+        """
+        return Tensor(self.data, requires_grad=False)</code></pre>
 
       <div class="hint">
-        <strong>What's <code>@property</code>?</strong><br>
-        It lets you access a method like an attribute—without parentheses. So instead of <code>t.shape()</code>, you can just write <code>t.shape</code>. It's syntactic sugar that makes the API cleaner.
+        <strong>Note:</strong> <code>detach()</code> creates a <code>Tensor</code> with <strong>requires_grad=False</strong>. That means it won't participate in the <strong>Computation graph</strong>.
       </div>
 
-      <div class="hint">
-        <strong>Hint:</strong> NumPy arrays already have <code>.shape</code>, <code>.ndim</code>, and <code>.size</code> attributes. Your Tensor's <code>self.data</code> is a numpy array...
-      </div>
+      <h2>Vocabulary</h2>
 
-      <h2>Exercise 2.3: <code>numpy()</code> and <code>detach()</code></h2>
-
-      <h3>numpy()</h3>
-
-      <p>This method returns a plain numpy array, disconnected from the Tensor.</p>
-
-      <pre><code>def numpy(self):
-    """Return a copy of the data as a plain numpy array."""
-    # YOUR CODE HERE</code></pre>
-
-      <p><strong>Why return a copy?</strong> So that modifying the returned array doesn't accidentally change the Tensor's data. They stay independent.</p>
-
-      <div class="hint">
-        <strong>Hint:</strong> Use <code>.copy()</code> on a numpy array to get an independent copy.
-      </div>
-
-      <h3>detach()</h3>
-
-      <p>This method returns a <em>new</em> Tensor with the same data, but with <code>requires_grad=False</code>.</p>
-
-      <pre><code>def detach(self):
-    """Create a new Tensor that won't track gradients."""
-    # YOUR CODE HERE</code></pre>
-
-      <p><strong>Why would you use this?</strong> Sometimes you want to use a tensor's values without including it in the computation graph. For example, when logging values during training, you don't need gradients for that.</p>
-
-      <div class="hint">
-        <strong>Hint:</strong> Create a new <code>Tensor(...)</code> with the same data but <code>requires_grad=False</code>.
-      </div>
-
-      <h2>Exercise 2.4: String Representations</h2>
-
-      <p>Python has two ways to convert an object to a string. Implement both:</p>
-
-      <pre><code>def __repr__(self):
-    """
-    Detailed view (for debugging). Shows data and requires_grad.
-    Example output: Tensor([1. 2. 3.], requires_grad=True)
-    """
-    # YOUR CODE HERE
-
-def __str__(self):
-    """
-    Simple view (for printing). Just shows the data.
-    Example output: [1. 2. 3.]
-    """
-    # YOUR CODE HERE</code></pre>
-
-      <p><code>__repr__</code> is what you see when you type a variable name in the REPL. <code>__str__</code> is what <code>print()</code> uses.</p>
-
-      <div class="hint">
-        <strong>Hint:</strong> Use f-strings for <code>__repr__</code>. For <code>__str__</code>, just convert <code>self.data</code> to a string.
-      </div>
+      <table>
+        <tr><th>Term</th><th>What it means</th></tr>
+        <tr><td><strong>Tensor</strong></td><td>A wrapper around a numpy array that also tracks its history (where it came from, what operations created it).</td></tr>
+        <tr><td><strong>Gradient</strong></td><td>A number that tells you how much an output changes when you nudge an input. Used to adjust model weights during training.</td></tr>
+        <tr><td><strong>Computation graph</strong> (also called "autograd graph")</td><td>The record of operations that created a tensor. Like a receipt showing the chain of math that happened.</td></tr>
+        <tr><td><strong>Autograd</strong></td><td>"Automatic gradient" — the process of walking the computation graph backwards to compute gradients for you.</td></tr>
+        <tr><td><strong>Forward pass</strong></td><td>Running your inputs through the model to get an output. This builds the computation graph.</td></tr>
+        <tr><td><strong>Backward pass</strong></td><td>Walking the computation graph in reverse to compute gradients. This is what <code>backward()</code> does.</td></tr>
+        <tr><td><strong>requires_grad</strong></td><td>A flag that says "track this tensor in the computation graph so we can compute its gradient later."</td></tr>
+        <tr><td><strong>detach()</strong></td><td>Create a copy of a tensor that is NOT tracked in the computation graph.</td></tr>
+      </table>
 
       <h2>What's Next?</h2>
 

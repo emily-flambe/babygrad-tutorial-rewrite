@@ -31,169 +31,775 @@
     <main class="content">
       <h1>Chapter 10: Convolutional NN</h1>
 
-      <h2>Why CNNs?</h2>
-      <p>Linear layers are inefficient for image data. A 64x64x6 image would require 24,576 parameters just for the first layer. CNNs introduce spatial feature learning through kernels that slide across images, dramatically reducing parameters while capturing local patterns.</p>
+      <p>Lets take an image of (64,64,6) (H,W,C) dimensions, Can we train this single image so that our model predicts the ideal output? One obvious and simple thing would be to simply use a <code>Linear</code> layer and do the training.</p>
 
-      <h2>Core Concepts</h2>
+      <pre><code>model = nn.Linear(64*64*6,10)
+image = tensor.randn(1,64,64,6)
+image = image.reshape(1,-1)
+output = model(image)</code></pre>
 
-      <h3>Padding</h3>
-      <p>Adding additional zeros in the spatial dimensions. This allows the kernel to process edge pixels and can maintain output size.</p>
+      <p>This is doable but not preferable. Why? Lets think in term of amount of computation required</p>
 
-      <h3>Stride</h3>
-      <p>Controls how many pixels the kernel moves at each step. Stride > 1 reduces output dimensions.</p>
+      <p><strong>64*64*6 = 24576</strong></p>
 
-      <h3>Output Size Formula</h3>
-      <pre><code>output_size = (Input + 2*Padding - Kernel) / Stride + 1</code></pre>
+      <p>Big weights for just a simple image. What if the image was bigger?</p>
 
-      <h2>Implementation Approaches</h2>
-
-      <h3>1. Simple Convolution (Naive)</h3>
-      <p>Basic nested loops - slow but conceptually clear:</p>
-      <pre><code>def conv_naive(input, kernel, padding=0, stride=1):
-    # Pad input
-    # For each output position:
-    #   Extract patch
-    #   Element-wise multiply with kernel
-    #   Sum results
-    pass</code></pre>
-
-      <h3>2. Matrix Multiplication Approach</h3>
-      <p>Instead of doing a calculation for each pixel, we shift focus to how each weight affects output entirely at once. This reformulates convolution as matrix multiplication.</p>
-
-      <h3>3. im2col Trick</h3>
-      <p>Converting patches into matrices for optimized computation using NumPy's stride manipulation:</p>
-      <pre><code>def im2col(input, kernel_size, padding, stride):
-    """
-    Rearrange image patches into columns for matrix multiplication.
-
-    Input: (N, C, H, W)
-    Output: (N, C*kH*kW, out_H*out_W)
-    """
-    # Use np.lib.stride_tricks.as_strided for efficient patch extraction
-    pass</code></pre>
-
-      <h2>Forward Pass</h2>
-
-      <div class="exercise">
-        <h3>Exercise 9.1: Conv2d Forward</h3>
-        <pre><code>def conv_forward(x, weight, bias, padding, stride):
-    """
-    Convolutional layer forward pass.
-
-    Args:
-        x: Input tensor (N, C_in, H, W)
-        weight: Filter weights (C_out, C_in, kH, kW)
-        bias: Bias terms (C_out,) or None
-        padding: Padding amount
-        stride: Stride value
-
-    Returns:
-        Output tensor (N, C_out, H_out, W_out)
-    """
-    N, C_in, H, W = x.shape
-    C_out, _, kH, kW = weight.shape
-
-    # Calculate output dimensions
-    H_out = (H + 2*padding - kH) // stride + 1
-    W_out = (W + 2*padding - kW) // stride + 1
-
-    # Use im2col to extract patches
-    # Reshape weight for matrix multiplication
-    # Perform batched matrix multiplication
-    # Add bias if present
-    # Reshape to output dimensions
-    # Your solution here
-    pass</code></pre>
+      <div class="hint">
+        <h4>What is an Image Tensor?</h4>
+        <p>While a standard Tensor is often just a 2D matrix (rows x columns), an <strong>Image Tensor</strong> is strictly <strong>4-Dimensional</strong> to handle batches of visual data efficiently.</p>
+        <p>It follows the <strong>NHWC</strong> convention (We will use this):</p>
+        <ul>
+          <li><strong>N (Batch Size)</strong>: The number of images in the stack.</li>
+          <li><strong>C (Channels)</strong>: The depth (e.g., 3 for RGB, 1 for Grayscale).</li>
+          <li><strong>H (Height)</strong></li>
+          <li><strong>W (Width)</strong></li>
+        </ul>
+        <p>Some libraries use <strong>NCHW</strong>!</p>
       </div>
 
-      <h2>Backward Pass</h2>
-
-      <p>The backward pass requires computing gradients for both input and weights:</p>
-
-      <h3>Gradient w.r.t. Weights</h3>
-      <p>Each weight element contributes to multiple output elements. The gradient is computed by correlating input patches with output gradients.</p>
-
-      <h3>Gradient w.r.t. Input</h3>
-      <p>Requires "transposed convolution" - the relationship between forward padding and backward padding is inverted.</p>
-
-      <h3>Helper Operations</h3>
-
-      <h4>Flip</h4>
-      <p>Reverses kernel for gradient computation:</p>
-      <pre><code>def flip(x):
-    """Flip kernel 180 degrees (reverse both spatial dimensions)."""
-    return x[..., ::-1, ::-1]</code></pre>
-
-      <h4>Dilate</h4>
-      <p>Inserts zeros between elements for handling stride in backpropagation:</p>
-      <pre><code>def dilate(x, dilation):
-    """Insert zeros between elements."""
-    if dilation == 0:
-        return x
-    # Create output with zeros
-    # Fill in original values at strided positions
-    pass</code></pre>
-
-      <div class="exercise">
-        <h3>Exercise 9.2: Conv2d Backward</h3>
-        <pre><code>def conv_backward(grad_output, x, weight, padding, stride):
-    """
-    Convolutional layer backward pass.
-
-    Args:
-        grad_output: Gradient from next layer (N, C_out, H_out, W_out)
-        x: Original input (N, C_in, H, W)
-        weight: Filter weights (C_out, C_in, kH, kW)
-        padding: Original padding
-        stride: Original stride
-
-    Returns:
-        grad_x: Gradient w.r.t. input
-        grad_weight: Gradient w.r.t. weights
-        grad_bias: Gradient w.r.t. bias
-    """
-    # Dilate grad_output if stride > 1
-    # Compute grad_weight via correlation
-    # Compute grad_x via transposed convolution
-    # Compute grad_bias by summing over batch and spatial dims
-    # Your solution here
-    pass</code></pre>
+      <div class="hint">
+        <h4>What are Spatial Dimensions?</h4>
+        <p>Dimensions which represents a physical space (H,W).</p>
       </div>
 
-      <h2>nn.Conv Module</h2>
+      <p>Why are big weights a problem? You might ask: "Aren't big models better? Don't we want more parameters to learn more things?"</p>
+
+      <p>When we use a <code>Linear</code> layer on image pixels, we expect it to learn meaningful features of the image. However, this approach has major limitations:</p>
+
+      <ul>
+        <li>The model does not capture relationships between neighboring pixels.</li>
+        <li>Each pixel is treated independently, ignoring spatial structure</li>
+        <li>The model struggles to recognize slightly transformed versions of the same image (e.g., cropped/rotated image)</li>
+      </ul>
+
+      <p>Linear layers for images leads to:</p>
+
+      <ul>
+        <li>A very large number of parameters</li>
+        <li>High computational and memory cost</li>
+        <li>Poor understanding of spatial features such as edges and textures</li>
+      </ul>
+
+      <h2>10.1 Convolutional Neural Networks</h2>
+
+      <p>TO understand an images features We can't look at the image completely at once but little by little. CNN's will understand the spatial features and will have less parameters than the above model. They use a <strong>kernel</strong> or <strong>filter</strong> <strong>that is a small matrix of shape (K,K)</strong>. This small matrix will move (convolve) over the spatial dimensions of the image and does <strong>the dot product to produce one single output pixel value.</strong></p>
+
+      <p>At ever step:</p>
+
+      <ul>
+        <li>Look at the (k,k) patch in the image.</li>
+        <li>Perform dot product of this above patch with kernel.</li>
+        <li>Produce a single output pixel.</li>
+        <li>Move kernel to next step.</li>
+      </ul>
+
+      <p>Does it really use less weights? less computation? We use the same kernel for every patch, instead of learning separate weights for every pixel. This reduces the number of parameters and computations.</p>
+
+      <h2>10.2 Hyperparameters</h2>
+
+      <p>The <strong>kernel</strong> slides but can we control how it should slide, how much it should slide?</p>
+
+      <h3>10.2.1 Padding</h3>
+
+      <p>When a <strong>kernel</strong> moves over an image, it starts from top-left corner and slides across the image. But clearly we can observe that the edge pixels are used less and also our output gets smaller. If we want to use the edge pixels equally and also to have the same output size we would consider padding.</p>
+
+      <p>Padding is just adding additional zero's in the spatial dimensions.</p>
+
+      <p>How much to pad? Can we decide it? If we want the Output Size to equal the Input Size (assuming Stride=1), this simple formula tells us the padding</p>
+
+      <p><strong>Padding = (Kernel Size - 1) / 2</strong></p>
+
+      <h3>10.2.2 Stride</h3>
+
+      <p>We mentioned that the <strong>kernel moves (convolves) to the next (k,k) patch of the image</strong> after each step. But how much should it move?</p>
+
+      <p>The default is <strong>Stride = 1. The kernel moves 1 pixel at a time</strong>. This preserves the most information but keeps the output large.</p>
+
+      <p>However, sometimes we want to <strong>decrease the spatial dimensions of the image</strong> to save memory. We can increase the step size.</p>
+
+      <ul>
+        <li>Stride 1: Moves 1 pixel.</li>
+        <li>Stride 2: Moves 2 pixels</li>
+      </ul>
+
+      <p>Using all the available Hyperparameters we can safely calculate the output size by the given formula below</p>
+
+      <p><strong>Output Size = (Input + 2 * Padding - Kernel) / Stride + 1</strong></p>
+
+      <h2>10.3 Simple Convolution</h2>
+
+      <p>Lets start implementing a simple Convolution using normal <strong>loops</strong>. Before we write the code, we need to address a common point of confusion. We previously said a kernel is size (K,K). However, when working with actual code and RGB images, our tensors are 4-Dimensional</p>
+
+      <div class="note">
+        <h4>Why 4 dimensions for kernel too?</h4>
+        <p>You might ask: "I thought the kernel was just a small (K,K) square?" It is true but images also have <strong>depth</strong> or <strong>Channels</strong></p>
+        <ul>
+          <li><strong>Input Depth Match</strong>: If the input image has C_in Channels, the kernel must also have C_in Channels to process all the Channels at once.</li>
+        </ul>
+      </div>
+
+      <p>We will Work with:</p>
+
+      <ul>
+        <li>Image (N,H,W,C_in):</li>
+        <li>Kernel(K,K,C_in, C_out)</li>
+        <li>Padding = 0</li>
+        <li>Stride=1</li>
+      </ul>
+
+      <p>Lets first find the shape of the output image after once passing through the function. We know that the shape of output image must be</p>
+
+      <p><strong>(N, new_height, new_width, c_out)</strong></p>
+
+      <p>What should the dimensions <strong>new_height and new_width</strong> be? Lets use our formula from above:</p>
+
+      <p><strong>Output Size = (Input + 2 * Padding - Kernel) / Stride + 1</strong></p>
+
+      <p>Replace padding=0 and stride=1 we get</p>
+
+      <p><strong>new_height = Height - Kernel + 1</strong><br>
+      <strong>new_width = Width - Kernel + 1</strong></p>
+
+      <pre><code>import numpy as np
+
+def simple_conv(image, weight):
+    N, H, W, C_in = image.shape
+    K, _, _, C_out = weight.shape
+    H_out = H - K + 1
+    W_out = W - K + 1
+    out = np.zeros((N, H_out, W_out, C_out))
+
+    # 1. Iterate over each image in the batch
+    for n in range(N):
+        # 2. Iterate over each feature we want to output.
+        for cout in range(C_out):
+            for x in range(H_out):
+                for y in range(W_out):
+                    for cin in range(C_in):
+                        for i in range(K):
+                            for j in range(K):
+                                out[n, x, y, cout] +=
+                                     image[n, x+i, y+j, cin] *
+                                             weight[i, j, cin, cout]
+
+    return out</code></pre>
+
+      <p>This above code does the job but it so slow. Lets use some magic to make it faster</p>
+
+      <h2>10.4 Convolution as Matrix Multiplication</h2>
+
+      <p>Matrix Multiplication is faster and heavily optimized by the computers. Can we convert our <code>simple conv</code> into a Matrix Multiplication and removing the for loops?</p>
+
+      <p>What happens if we transform the function? Why does it get faster? Instead of doing a calculation for each pixel (Output-Centric), we shift our focus to how each weight of the kernel affects the output entirely at once (Kernel-Centric).</p>
+
+      <h2>10.5 Example:</h2>
+
+      <p><strong>Input Image (3x3)</strong></p>
+
+      <pre><code>Image =
+| 1  4  7 |
+| 2  5  8 |
+| 3  6  9 |</code></pre>
+
+      <p><strong>Kernel (2x2)</strong></p>
+
+      <pre><code>Kernel =
+| 1     10   |
+| 100   1000 |</code></pre>
+
+      <p>Each kernel weight will generate a <strong>shifted copy</strong> of the image.</p>
+
+      <p><strong>Step-by-Step: Shifted Copies</strong></p>
+
+      <p><strong>Step 1 Top-Left Weight (1)</strong> This weight acts on the <strong>top-left</strong> of every sliding window. We take the top-left slice of the image and multiply by 1. Why only this patch? Why are we not including the other numbers? Imagine you slide the above <strong>kernel</strong> over the <strong>image</strong> and just focus on the <strong>kernel[0,0] pixel</strong>, what values does this pixel touch? Instead of doing it one by one we do it all at once.</p>
+
+      <pre><code>Output +=
+| 1  4 |
+| 2  5 |
+x 1</code></pre>
+
+      <p><strong>Step 2 Top-Right Weight (10)</strong> We shift the image one column to the right and multiply by 10.</p>
+
+      <pre><code>Output +=
+| 4  7 |
+| 5  8 |
+x 10</code></pre>
+
+      <hr>
+
+      <p><strong>Step 3 Bottom-Left Weight (100)</strong> We shift the image one row down and multiply by 100.</p>
+
+      <pre><code>Output +=
+| 2  5 |
+| 3  6 |
+x 100</code></pre>
+
+      <hr>
+
+      <p><strong>Step 4 Bottom-Right Weight (1000)</strong> We shift the image down and right and multiply by 1000.</p>
+
+      <pre><code>Output +=
+| 5  8 |
+| 6  9 |
+x 1000</code></pre>
+
+      <hr>
+
+      <p><strong>Python Implementation</strong></p>
+
+      <pre><code>import numpy as np
+
+image = np.array([
+    [1, 4, 7],
+    [2, 5, 8],
+    [3, 6, 9]
+])
+
+kernel = np.array([
+    [1, 10],
+    [100, 1000]
+])
+
+output = np.zeros((2, 2), dtype=int)
+
+output += image[0:2, 0:2] * kernel[0, 0]   # top-left
+output += image[0:2, 1:3] * kernel[0, 1]   # top-right
+output += image[1:3, 0:2] * kernel[1, 0]   # bottom-left
+output += image[1:3, 1:3] * kernel[1, 1]   # bottom-right
+
+output
+
+# array([
+#    [54321, 87654],
+#    [65432, 98765]
+#    ])</code></pre>
+
+      <p>Now that we understand how we have shifted our focus, we can reduce the for loops used in the <code>simple_conv</code> and instead use matrix Multiplication to improve performance.</p>
+
+      <pre><code>def conv_matrix_multiplication(image, weight):
+    N, H, W, C_in = image.shape
+    K, _, _, C_out = weight.shape
+    H_out = H - K + 1
+    W_out = W - K + 1
+    out = np.zeros((N, H_out, W_out, C_out))
+
+    for i in range(K):
+        for j in range(K):
+            #(N, H_out, W_out, C_in) @ (C_in, C_out)
+            #output (N, H_out, W_out, C_out)
+            # Take All batches and all channels.
+            out += image[: , i:i+H_out, j: j+W_out, : ] @ weight[i,j]
+    return out </code></pre>
+
+      <p>This is a massive improvement from what we had before. But We still have 2 loops! Can we do something even better than this?</p>
+
+      <h2>10.6 The im2col Trick</h2>
+
+      <p>We take every K x K patch that the kernel would see, and we stretch it out into a single row (or column).</p>
+
+      <p><strong>1. Flatten the Kernel</strong></p>
+
+      <p>First, we take our (2 x 2) kernel and flatten it into a single column vector.</p>
+
+      <pre><code>Kernel = | 1  10  |     Reshape    | 1    |
+         | 100 1000 |  --------->   | 10   |
+                                    | 100  |
+                                    | 1000 |</code></pre>
+
+      <p><strong>2. Flatten the Input Patches (im2col)</strong></p>
+
+      <p>Now, we look at our input image. We need to find the four 2 x 2 patches that the kernel slides over.</p>
+
+      <pre><code>Image = | 1  4  7 |
+        | 2  5  8 |
+        | 3  6  9 |</code></pre>
+
+      <p><strong>Patch 1 (Top-Left):</strong></p>
+      <pre><code>| 1  4 |
+| 2  5 |</code></pre>
+      <p>Stretch to Row: <code>[1, 4, 2, 5]</code></p>
+
+      <p><strong>Patch 2 (Top-Right):</strong></p>
+      <pre><code>| 4  7 |
+| 5  8 |</code></pre>
+      <p>Stretch to Row: <code>[4, 7, 5, 8]</code></p>
+
+      <p><strong>Patch 3 (Bottom-Left):</strong></p>
+      <pre><code>| 2  5 |
+| 3  6 |</code></pre>
+      <p>Stretch to Row: <code>[2, 5, 3, 6]</code></p>
+
+      <p><strong>Patch 4 (Bottom-Right):</strong></p>
+      <pre><code>| 5  8 |
+| 6  9 |</code></pre>
+      <p>Stretch to Row: <code>[5, 8, 6, 9]</code></p>
+
+      <p><strong>3. The Matrix Multiplication</strong></p>
+
+      <p>Now we stack these rows into a large Input Matrix (X_col) and multiply it by our Weight Vector (W_col).</p>
+
+      <pre><code>| 1  4  2  5 |       | 1    |       | 5241 |
+| 4  7  5  8 |   x   | 10   |   =   | 8574 |
+| 2  5  3  6 |       | 100  |       | 6352 |
+| 5  8  6  9 |       | 1000 |       | 9685 |
+
+Input Matrix (N, 4) x Weights (4, 1) = Result (N, 1)</code></pre>
+
+      <p>Check the math for the first row: (1 x 1) + (4 x 10) + (2 x 100) + (5 x 1000) = 5241.</p>
+
+      <p><strong>4. Reshape</strong></p>
+
+      <p>Finally, we take our result vector and fold it back into the output shape (2 x 2).</p>
+
+      <pre><code>| 5241 |             | 5241  8574 |
+| 8574 |  Reshape    | 6352  9685 |
+| 6352 | --------->
+| 9685 |</code></pre>
+
+      <pre><code>import numpy as np
+
+image = np.array([
+    [1, 4, 7],
+    [2, 5, 8],
+    [3, 6, 9]
+])
+
+kernel = np.array([
+    [1, 10],
+    [100, 1000]
+])
+
+# Flatten the kernel (column-major order to match manual example)
+W_col = kernel.flatten().reshape(-1, 1)  # [1, 10, 100, 1000]
+
+patches = np.stack([
+    image[0:2, 0:2].flatten(),  # Top-left: [1,4,2,5]
+    image[0:2, 1:3].flatten(),  # Top-right: [4,7,5,8]
+    image[1:3, 0:2].flatten(),  # Bottom-left: [2,5,3,6]
+    image[1:3, 1:3].flatten()   # Bottom-right: [5,8,6,9]
+], axis=0)
+
+result_vector = patches @ W_col
+
+# Reshape to 2x2 output
+output = result_vector.reshape(2, 2)
+print(output)
+# [[5241 8574]
+#  [6352 9685]]</code></pre>
+
+      <p>We are just</p>
+
+      <ul>
+        <li>Flattening the kernels and patches.</li>
+        <li>Matrix multiplying.</li>
+        <li>Reshaping</li>
+      </ul>
+
+      <p>Before going to the actual python implementation of the code lets first understand a little bit about how matrix is placed inside the memory</p>
+
+      <h3>10.6.1 Matrix and memory</h3>
+
+      <p>When you create a (3x3) matrix in NumPy, how is it stored? Is it a grid? Or some magic way? <strong>The matrix is stored in a 1D array.</strong> It doesn't matter how many dimensions the matrix has; all of them are stored linearly. The memory in our computer is just a linear tape of bytes. Lets take an example</p>
+
+      <pre><code>A = np.array([
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8]
+], dtype=np.int64)</code></pre>
+
+      <p>The above matrix is just stored in <strong>[0, 1, 2, 3, 4, 5, 6, 7, 8]</strong> this way. NumPy is doing something very beautiful under the hood to map the 2D coordinates (row, col) to this 1D tape.</p>
+
+      <div class="hint">
+        <h4>What are Strides (Memory)?</h4>
+        <p>Strides tell the computer: "How many bytes do I need to skip to move one step in each dimension?"</p>
+        <p>In the example above, to move to the next row, we must skip 3 items. To move to the next column, we skip 1 item.</p>
+        <p>Since we used int64, every number takes up 8 bytes.</p>
+        <ul>
+          <li>Step Row: Skip 3 items (3x8 bytes) = 24 bytes.</li>
+          <li>Step Column: Skip 1 item (1x8 bytes) = 8 bytes.</li>
+        </ul>
+        <p>So, <strong>A.strides is (24, 8)</strong>.</p>
+        <p>Mathematically, NumPy finds the address of A[i, j] using:</p>
+        <p><strong>Address = Start + (i x 24) + (j x 8)</strong></p>
+      </div>
+
+      <p>Now that we know what Strides are we can focus on the implementation part. As we said earlier we need to <strong>change the shape of images and weights</strong> that allow us to do matrix Multiplication. That means We need to have <strong>(N,inner_dim) image @ (inner_dim,C_out) kernel to get (N,C_out)</strong> and then we can reshape back into <strong>(N, H_out,W_out, C_out)</strong>.</p>
+
+      <p>The question is how can we make our image shape such that we can do matrix Multiplication? Can we use <code>reshape</code>?</p>
+
+      <p>Reshape doesn't work <strong>if the total elements of output don't match the input.</strong> Our output pixels change in shape according to (kernel size,padding,strides). <code>So we can't use reshape</code></p>
+
+      <p><code>as_strided</code> from numpy allows us to change the shape of our <strong>image to our desired shape.</strong> Under the hood <code>as_strided</code> doesn't create a new numpy array but just changes its <code>strides</code> without changing the data.</p>
+
+      <p>Hence no extra memory is being used here.</p>
+
+      <pre><code>def conv_im2col(image, weight):
+    N,H,W,C_in = image.shape
+    K,_,_,C_out = weight.shape
+    Ns, Hs, Ws, Cs = image.strides
+
+    inner_dim = K * K * C_in
+    A=np.lib.stride_tricks.as_strided(image,shape=(N,H-K+1, W-K+1,K,K,C_in),
+                strides = (Ns, Hs, Ws, Hs, Ws, Cs)).reshape(-1,inner_dim)
+    # (-1,inner_dim) @ (inner_dim, c_out)
+    out = A @ weight.reshape(-1, C_out)
+    return out.reshape(N,H-K+1,W-K+1,C_out)</code></pre>
+
+      <p>Two obvious questions:</p>
+
+      <ul>
+        <li>Why a <strong>6D</strong> matrix is created.</li>
+        <li>Why the strides have (Hs) and (Ws) twice?</li>
+      </ul>
+
+      <p>We will now focus on adding <code>Conv</code> to our library.</p>
+
+      <h2>10.7 Conv Forward</h2>
+
+      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
 
       <div class="exercise">
-        <h3>Exercise 9.3: Conv2d Module</h3>
-        <pre><code>class Conv2d(Module):
-    def __init__(self, in_channels, out_channels, kernel_size,
-                 stride=1, padding=0, bias=True):
-        super().__init__()
+        <h3>Exercise 2.1</h3>
+        <pre><code>class Conv(TensorOp):
+    def __init__(self, stride= 1, padding=0):
         self.stride = stride
         self.padding = padding
 
-        # Initialize weights with proper shape
-        # (out_channels, in_channels, kernel_size, kernel_size)
-        self.weight = Parameter(...)
-        self.bias = Parameter(...) if bias else None
+    def forward(self, A, B):
+        #your solution
+        # If padding>0 use np.pad on `spatial dimensions`.
 
-    def forward(self, x):
-        # Handle NHWC to NCHW conversion if needed
-        # Call conv_forward
-        # Your solution here
-        pass</code></pre>
+        #The im2col trick.
+    def backward(self, out_grad, node):
+        #next section
+
+def conv(a, b, stride=1, padding=1):
+    return Conv(stride, padding)(a, b)</code></pre>
+        <div class="note">
+          <p>Use <code>A.pad</code> if needed.</p>
+        </div>
       </div>
 
-      <h2>Data Format Note</h2>
-      <p>This implementation uses NCHW format (batch, channels, height, width). If your data is in NHWC format (common for image libraries), transpose before and after convolution:</p>
-      <pre><code># NHWC to NCHW
-x = x.transpose((0, 3, 1, 2))
-# ... convolution ...
-# NCHW to NHWC
-x = x.transpose((0, 2, 3, 1))</code></pre>
+      <h2>10.8 Conv Backward</h2>
+
+      <p>Let's implement <code>backward</code> function for <code>Conv</code>. Before that we need to first understand what are we trying to do in this <code>backward</code> function and what is the shape of <code>out_grad</code> and what is returned by our <code>backward</code> function here.</p>
+
+      <p><strong>Understanding Gradient Flow in Convolution</strong></p>
+
+      <p>When computing gradients for convolution, we need to propagate <strong>out_grad</strong> back to both inputs:</p>
+
+      <ul>
+        <li><strong>Gradient w.r.t. input (A)</strong>: How does changing A affect the output?</li>
+        <li><strong>Gradient w.r.t. kernel (B)</strong>: How does changing B affect the output?</li>
+      </ul>
+
+      <p>The shape of <strong>out_grad</strong> is <strong>(N, H_out, W_out, C_out)</strong>. Our <code>backward</code> function must return two tensors:</p>
+
+      <ul>
+        <li>Gradient w.r.t. A with shape (N, H, W, C_in)</li>
+        <li>Gradient w.r.t. B with shape (K, K, C_in, C_out)</li>
+      </ul>
+
+      <p>But how do we compute these gradients? It turns out <strong>that the gradient of a convolution is itself a convolution!</strong> However, we need to carefully adjust the inputs for the convolution to make this work.</p>
+
+      <p><strong>Why Flip?</strong></p>
+
+      <p>In the forward pass, our kernel slides over the input. In the backward pass, we need to figure out how each input pixel contributed to the output gradients.</p>
+
+      <p>In the forward pass, the top-left kernel weight multiplies with many different input pixels as it slides. In the backward pass, we need to "reverse" this process. The mathematical relationship requires us to flip the kernel - what was top-left now becomes bottom-right.</p>
+
+      <h3>10.8.1 Flip Operation</h3>
+
+      <p>The <strong>flip</strong> operation reverses a tensor along specified axes.</p>
+
+      <p><strong>Example: 3x3 Flip</strong></p>
+
+      <p>Original:</p>
+      <pre><code>| 1  2  3 |
+| 4  5  6 |
+| 7  8  9 |</code></pre>
+
+      <p>After <code>flip(axes=(0,1))</code>:</p>
+      <pre><code>| 9  8  7 |
+| 6  5  4 |
+| 3  2  1 |</code></pre>
+
+      <p>Lets implement <strong>Flip</strong>.</p>
+
+      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+
+      <div class="exercise">
+        <h3>Exercise 11.2</h3>
+        <pre><code>class Flip(Function):
+    def __init__(self, axes=None):
+        self.axes = axes
+    def forward(self,a):
+        #your solution
+    def backward(self,out_grad,node):
+        #your solution
+
+def flip(a, axes):
+    return Flip(axes)(a)</code></pre>
+        <div class="note">
+          <p>Can we use <code>np.flip</code> for both <code>forward</code> and <code>backward</code>?</p>
+        </div>
+      </div>
+
+      <h3>10.8.2 Why Dilate?</h3>
+
+      <p>When <strong>stride > 1</strong> in the forward pass, the kernel "skips" pixels. For example, with <strong>stride=2</strong>, the kernel moves 2 pixels at a time.</p>
+
+      <p>In the backward pass, <em>out_grad</em> has fewer spatial dimensions because of this striding. To properly propagate gradients back, we need to "undo" this compression by inserting zeros between the gradient values. This matches the spacing that the kernel used during the forward pass.</p>
+
+      <h3>10.8.3 Dilate Operation</h3>
+
+      <p>The <strong>dilate</strong> operation inserts zeros between elements along specified axes.</p>
+
+      <p><strong>Example: 3x3 Dilate with dilation=1</strong></p>
+
+      <p>Original:</p>
+      <pre><code>| 1  2  3 |
+| 4  5  6 |
+| 7  8  9 |</code></pre>
+
+      <p>After <code>dilate(axes=(0,1), dilation=1)</code>:</p>
+      <pre><code>| 1  0  2  0  3 |
+| 0  0  0  0  0 |
+| 4  0  5  0  6 |
+| 0  0  0  0  0 |
+| 7  0  8  0  9 |</code></pre>
+
+      <p>Notice how each value is now separated by zeros. If the <strong>forward pass used stride=2, we need dilation=1 (which means "1 zero between each element")</strong> to restore the proper spacing.</p>
+
+      <p>How to implement a dilate function then? Lets assume we have a zero-filled array of the input shape, then we just need to fill the indices with <code>out_grad</code> matrix and skip when needed.</p>
+
+      <p>Lets assume we have a 1D array</p>
+
+      <pre><code>a = [1,2,3]</code></pre>
+
+      <p>We want to use the dilation=1. That means a <strong>0</strong> between each number.</p>
+
+      <pre><code>new_a = [0,0,0,0,0]
+# start from 0th index till last index, move 2, (dilation+1)
+new_a[0,len(new_a), 2] = a
+
+>>> [1,0,2,0,3]</code></pre>
+
+      <p>How did we decide which numbers should be skipped? And how does our old dimensions change? By how much?</p>
+
+      <p>We just need to <strong>find the new axes</strong> and then use slice.</p>
+
+      <p><strong>Newaxis = Oldaxis + (Oldaxis - 1) x Dilation</strong></p>
+
+      <p>Lets implement <code>Dilate</code>.</p>
+
+      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+
+      <div class="exercise">
+        <h3>Exercise 11.3</h3>
+        <pre><code>class Dilate(Function):
+    def __init__(self,axes, dilation ):
+        self.axes = axes
+        self.dilation = dilation
+
+    def forward(self, a):
+        new_shape = list(a.shape)
+        slices = [slice(None)] * a.ndim
+
+        #your solution here
+        #loop over each axis to find its new axis
+        #and also create `slice` just like above.
+        ##
+        out = np.zeros(tuple(new_shape),dtype=a.dtype)
+        out[tuple(slices)] = a
+        return out
+    def backward(self,out_grad, node):
+        slices = [slice(None)] * out_grad.ndim
+        for axis in self.axes:
+            slices[axis] = slice(0, None, self.dilation + 1)
+        return out_grad.data[tuple(slices)]
+
+
+def dilate(a, axes, dilation=1):
+    return Dilate(axes, dilation)(a)</code></pre>
+        <div class="note">
+          <p>There is no <code>np.dilate</code>. Must implement it yourself.</p>
+        </div>
+      </div>
+
+      <p>Lets now try to implement <code>conv.backward</code>. We have 2 things to return <code>grad_a</code> and <code>grad_b</code>.</p>
+
+      <p>We are sure that <code>out_grad</code> is smaller than inputs. If <code>stride</code> > 1 then no matter what, we will do the <strong>dilation</strong>.</p>
+
+      <p>The question then becomes, what <strong>axes</strong> will be dilated and what the <strong>dilation=</strong> should be?</p>
+
+      <p>The <strong>dilation</strong> should be just <strong>(stride - 1)</strong> Because if <strong>stride=2</strong> then we need to add 1 zero between each number and we dilate the axes (1,2) the spatial dimensions only.</p>
+
+      <p><strong>Finding <code>grad_a</code></strong></p>
+
+      <p>To find the gradient with respect to our input A, we need to answer: "How did each pixel in A contribute to the final error?"</p>
+
+      <p>We need to convert <code>out_grad</code> to the original shape of <code>A</code>. We already have a dilated <strong>out_grad</strong>. We just need to apply <code>conv</code> to this with a flipped kernel.</p>
+
+      <p><strong>grad_A = conv(dilated_out_grad, flipped_kernel, padding=?)</strong></p>
+
+      <p>What should the padding be?</p>
+
+      <p>Lets suppose:</p>
+
+      <ul>
+        <li><strong>Input (A)</strong>: 7 pixels</li>
+        <li><strong>Kernel (K)</strong>: 3 pixels</li>
+        <li><strong>padding</strong>: 0</li>
+        <li>Stride: 1</li>
+        <li>Forward Pass: (7 + 0 - 3) + 1 = <strong>5</strong> pixels. (We lost 2 pixels).</li>
+      </ul>
+
+      <p>Now our <code>out_grad</code> shape is 5 pixels. We need to do something to <code>out_grad</code> so that it becomes 7.</p>
+
+      <p>Get from the 5-pixel <code>out_grad</code> back to a 7-pixel <code>grad_a</code></p>
+
+      <p><strong>P_backward = (K-1) - P_forward</strong>.</p>
+
+      <ul>
+        <li>Calculate P_back: (3 - 1) - 0 = <strong>2</strong>.</li>
+        <li>Adding padding: 5 + (2 x 2) = <strong>9</strong>.</li>
+        <li>Perform convolution: (9 - 3) + 1 = <strong>7</strong>. Success!</li>
+      </ul>
+
+      <p>In our case</p>
+
+      <ul>
+        <li>A: (B,H,W,C_in)</li>
+        <li>B: (K,K,C_in,C_out)</li>
+        <li>outgrad: (B,H_out,W_out,C_out)</li>
+      </ul>
+
+      <p>If you carefully observe to do the <strong>convolution</strong> we need the <strong>input_channels</strong> to match. That means we need to first <code>transpose</code> the kernel and then flip it.</p>
+
+      <p><strong>(B, H_out, W_out, C_out) @ flipped(K, K, C_out, C_in) -> (B, H, W, C_in)</strong></p>
+
+      <p>The steps to find <code>grad_A</code> are.</p>
+
+      <ul>
+        <li>Dilate <code>out_grad</code> using <strong>dilation = stride - 1</strong>.</li>
+        <li>Transpose the kernel B on axes (2, 3) to swap C_in and C_out.</li>
+        <li>Flip the transposed kernel on (0, 1).</li>
+        <li>Calculate P_back = (K - 1) - P_forward.</li>
+        <li>Convolve the dilated gradient with the flipped/transposed kernel using padding= P_back</li>
+      </ul>
+
+      <p><strong>Finding <code>grad_b</code></strong></p>
+
+      <p>How do we find out exactly which weight in our K x K kernel caused the error? We treat the Input A as our new "image" and the dilated out_grad as our "kernel."</p>
+
+      <p>We need to get to (K, K, C_in, C_out). To do this, we rearrange our tensors so the Batch dimension (B) acts as the internal channel that gets summed out.</p>
+
+      <p><strong>(C_in, H, W, B) @ (H_out_dil, W_out_dil, B, C_out) -> (C_in, K, K, C_out)</strong></p>
+
+      <p>In the forward pass, we sum over channels. In the backward pass for weights, we <strong>sum over the batch</strong>. By <strong>swapping the Batch and Channel dimensions</strong>, we can 'trick' a standard convolution into doing the weight-summation for us."</p>
+
+      <p>The steps to find <code>grad_b</code>:</p>
+
+      <ul>
+        <li>Transpose A: (B, H, W, C_in) -> (C_in, H, W, B)</li>
+        <li>Transpose dilated out_grad: (B, H_out, W_out, C_out) -> (H_out, W_out, B, C_out)</li>
+        <li>Convolve: Use stride=1 and forward_padding.</li>
+        <li>Tranpose to original.</li>
+      </ul>
+
+      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+
+      <p>Now we can use the above helper functions to do the magic.</p>
+
+      <div class="exercise">
+        <h3>Exercise 2.2</h3>
+        <pre><code>class Conv(Function):
+    def __init__(self, stride= 1, padding=0):
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, A, B):
+        #your solution
+
+    def backward(self, out_grad, node):
+        #your solution
+        #hint: use flip and dilate operations
+
+        A, B = node.inputs
+
+        stride = self.stride
+        padding = self.padding
+
+        N, H, W, C_in = A.shape
+        K, _, _, C_out = B.shape
+
+        return grad_A, grad_B
+
+
+def conv(a, b, stride=1, padding=1):
+    return Conv(stride, padding)(a, b)</code></pre>
+        <div class="note">
+          <p>Use <code>flip</code> and <code>dilate</code> operations along with convolution to compute gradients. Use <code>conv</code> for both the grads. Be careful with the shape. Follow the shapes.</p>
+        </div>
+      </div>
+
+      <h2>10.9 nn.Conv</h2>
+
+      <p>This will be pretty simple to implement we will just need to use the <code>ops.conv</code> we implemented earlier and thats it.</p>
+
+      <p><strong>FILE</strong>: <strong>baby/nn.py</strong></p>
+
+      <p>Many images dataset return in <code>NCHW</code> so we have to first <code>transpose</code> them to <code>NHWC</code> and then call <code>ops.conv</code> that was written above. And then again <code>tranpose</code> back to the original form.</p>
+
+      <div class="exercise">
+        <h3>Exercise 10.2</h3>
+        <pre><code>class Conv(Module):
+    """
+    Most datasets use the NCHW format ,
+     but in our ops.conv method we used NHWC method,
+     so just be careful and use transpose.
+    Accepts inputs in NCHW format, outputs also in NCHW format
+    """
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True,
+                 device=None, dtype="float32"):
+        super().__init__()
+        if isinstance(kernel_size, tuple):
+            kernel_size = kernel_size[0]
+        if isinstance(stride, tuple):
+            stride = stride[0]
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.weight = Parameter(init.kaiming_uniform(
+            fan_in=in_channels * kernel_size * kernel_size,
+            fan_out=out_channels * kernel_size * kernel_size,
+            shape=(self.kernel_size, self.kernel_size, self.in_channels,
+                 self.out_channels),
+            device=device,
+            dtype=dtype
+        ))
+        if bias:
+            self.bias = Parameter(init.zeros(out_channels))
+        else:
+            self.bias = None
+        self.padding = (self.kernel_size - 1) // 2
+    def forward(self, x: Tensor) -> Tensor:
+        #transpose accordingly
+        # call conv
+        # add bias
+        # tranpose
+        #return </code></pre>
+        <div class="note">
+          <p>Most datasets uses <code>NCHW</code> format and we did <code>NHWC</code> format in our <code>ops.conv</code> so just transpose the input images and we are good to go.</p>
+          <p>You should use <code>reshape</code> and <code>broadcast_to</code> for bias.</p>
+        </div>
+      </div>
 
       <div class="nav">
         <a href="trainer.html">&larr; Trainer</a>
-        <a href="examples.html">Next: Examples &rarr;</a>
+        <a href="solutions.html">Next: Solutions &rarr;</a>
       </div>
 
       <div class="attribution">

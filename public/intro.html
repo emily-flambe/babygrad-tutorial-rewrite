@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Introduction — babygrad</title>
+  <title>1. Introduction — babygrad</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -29,44 +29,34 @@
     </nav>
 
     <main class="content">
-      <h1>Introduction</h1>
+      <h1>1. Introduction</h1>
 
       <blockquote>
-        <p><em>"If you wish to make an apple pie from scratch, you must first invent the universe."</em></p>
+        <p>"If you wish to make an apple pie from scratch, you must first invent the universe."</p>
+        <p>— <em>Carl Sagan</em></p>
       </blockquote>
 
-      <p>This book guides you through building a PyTorch-inspired deep learning library using Python and NumPy. No CUDA kernels, no backend libraries—just the core concepts implemented from scratch.</p>
+      <p>In this book, we will build a PyTorch-like deep learning library using Python and NumPy. We will then use this library to build and train few models. You can find these implementations in the <strong>examples</strong> section.</p>
 
-      <h2>What's Included</h2>
+      <h2>1.1 Prerequisites</h2>
       <ul>
-        <li>NumPy-based numerical computations</li>
-        <li>PyTorch-like architecture patterns</li>
-        <li>Practical model implementation examples</li>
+        <li><strong>Python</strong>: a basic familiarity with the language</li>
+        <li><strong>Mathematics</strong>: Some linear algebra, calculus, and probability<br>
+        <em>(or the ability to pick these up on the fly)</em></li>
+        <li><strong>Problem-solving</strong>: G. Polya's <em>How to Solve It</em> is highly recommended.<br>
+        Even a light skim of its strategy will help.</li>
       </ul>
 
-      <h2>What's Not Included</h2>
+      <h2>1.2 What We are not doing</h2>
       <ul>
-        <li>Custom CUDA kernels or GPU support</li>
-        <li>Advanced optimization techniques</li>
-        <li>Production-ready performance</li>
+        <li><strong>No CUDA kernels or custom Backend library</strong>: We will rely exclusively on the NumPy library for all heavy numerical computation.</li>
+        <li>The Complex stuff.</li>
       </ul>
 
-      <h2>The Journey</h2>
-      <p>We'll build up from first principles:</p>
-      <ol>
-        <li><strong>Tensor</strong> — The data container that tracks its own history</li>
-        <li><strong>Automatic Differentiation</strong> — Computing gradients without manual calculus</li>
-        <li><strong>Neural Network Modules</strong> — Reusable building blocks (Linear, ReLU, etc.)</li>
-        <li><strong>Optimizers</strong> — SGD, Adam, and the math behind weight updates</li>
-        <li><strong>Data Handling</strong> — Datasets and DataLoaders</li>
-        <li><strong>Training Infrastructure</strong> — Initialization, saving/loading, training loops</li>
-        <li><strong>Convolutional Networks</strong> — Image processing with CNNs</li>
-      </ol>
-
-      <p>By the end, you'll understand deep learning from foundational principles rather than relying on pre-built frameworks.</p>
+      <hr>
 
       <div class="nav">
-        <a href="index.html">← Home</a>
+        <a href="index.html">← Preface</a>
         <a href="tensor.html">Next: Tensor →</a>
       </div>
 

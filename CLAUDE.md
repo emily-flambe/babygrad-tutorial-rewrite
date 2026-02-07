@@ -1,71 +1,36 @@
 # babygrad Tutorial Guidelines
 
-## Target Audience
+## Content Replication Approach
 
-The reader:
-- Is familiar with Python and software engineering patterns
-- Is **new to deep learning concepts** (tensors, autograd, neural networks)
-- Appreciates things being made **clear and explicit** rather than assumed
-- Wants to **implement the code themselves**, not copy solutions
+**IMPORTANT: Faithfully replicate the original zekcrates tutorial.**
 
-## Pedagogical Approach
+When creating or updating chapter content:
+1. **Fetch the original HTML** directly from `https://zekcrates.quarto.pub/deep-learning-library/`
+2. **Extract the main content** from between `<main class="content">` and `</main>`
+3. **Convert Quarto markup** to our simpler HTML format:
+   - Quarto callouts → `<div class="hint">` or `<div class="note">`
+   - Quarto code blocks → simple `<pre><code>` blocks
+   - Keep all text, code, and explanations intact
+4. **Do not add, remove, or paraphrase content** - replicate it faithfully
 
-### Explain concepts before code
+### Original URL Mapping
 
-Before showing any code, explain:
-- **What** the thing is (in plain language)
-- **Why** we need it (what problem does it solve?)
-- **How** it connects to what we've already built
-
-Use analogies when helpful (e.g., "Tensor is like a tracked package—the item plus its shipping history").
-
-### Be explicit about Python/NumPy behavior
-
-Don't assume the reader knows how library functions behave. For example:
-- Show what `np.array()` accepts: lists, scalars, tuples, nested lists
-- Explain what `isinstance()` does with examples
-- Explain what `@property` does and why you'd use it
-
-### Provide structure, not solutions
-
-When creating exercises:
-- Give the **skeleton code** with the control flow already in place (if/elif/else, loops, etc.)
-- Use `_____` as fill-in-the-blank placeholders
-- Add **inline comments** that guide toward the solution without giving it away
-- Ask leading questions: "What attribute of a Tensor contains the numpy array?"
-
-**Good example:**
-```python
-if isinstance(data, Tensor):
-    # We need to extract the numpy array from inside it
-    # A Tensor's numpy array is stored in its .data attribute
-    data = _____  # What attribute of the input Tensor contains the numpy array?
-```
-
-**Bad example (too vague):**
-```python
-# if data isinstance of Tensor
-# YOUR CODE HERE
-```
-
-**Bad example (gives away the answer):**
-```python
-if isinstance(data, Tensor):
-    data = data.data
-```
-
-### Use hint boxes for supplementary info
-
-Put background explanations in hint boxes so they don't interrupt the flow:
-- Python concepts (`isinstance`, `@property`, `__repr__` vs `__str__`)
-- NumPy behavior (`np.array()` flexibility, `.copy()` for independence)
-- Design rationale (why return a copy? why default to True?)
-
-### Connect chapters forward and backward
-
-- End chapters with "What's Next?" previewing how this builds toward the next topic
-- Reference earlier chapters when building on concepts
-- Use consistent terminology across chapters
+| Local file | Original URL |
+|------------|--------------|
+| index.html | /index.html (Preface) |
+| intro.html | /intro.html (Ch 1: Introduction) |
+| tensor.html | /chapter1.html (Ch 2: Tensor) |
+| autograd.html | /chapter2.html (Ch 3: Automatic Differentiation) |
+| nn.html | /nn.html (Ch 4: nn) |
+| optim.html | /optim.html (Ch 5: Optimizer) |
+| data.html | /data.html (Ch 6: Data Handling) |
+| init.html | /initialization.html (Ch 7: Initialization) |
+| saving.html | /model_saving.html (Ch 8: Model Persistence) |
+| trainer.html | /trainer.html (Ch 9: Trainer) |
+| cnn.html | /cnn.html (Ch 10: Convolutional NN) |
+| solutions.html | /solutions.html (Ch 11: Solutions) |
+| examples.html | /examples.html (Ch 12: Examples) |
+| conclusion.html | /conclusion.html (Ch 13: Conclusion) |
 
 ## File Organization
 
@@ -77,27 +42,58 @@ The actual babygrad implementation lives in a separate repo: `emily-flambe/deep-
 
 ## Deployment
 
-The site auto-deploys on every push to `main` via GitHub Actions.
+The site auto-deploys on push to `main` via Cloudflare git integration.
 
 **Live URL:** https://babygrad-tutorial.emily-cogsdill.workers.dev
 
-## Styling
+## HTML Template
 
-- Mark revised chapters with the green "✓ Revised for clarity" badge
-- Use tables for comparing cases/options
-- Use `<div class="hint">` for supplementary explanations
-- Use `<div class="exercise">` for exercise callouts
-- Keep code blocks focused—one concept per block
+Each chapter should follow this structure:
 
-## Content Revision Workflow
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter N: Title — babygrad</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2><a href="index.html">babygrad</a></h2>
+      <ul>
+        <!-- navigation items -->
+      </ul>
+    </nav>
 
-When revising a chapter:
-1. Keep the **same information** as the original
-2. Add **explanations** for concepts
-3. Convert solutions to **fill-in-the-blank exercises**
-4. Add **hints** that guide without giving answers
-5. Test by asking: "Could a beginner follow this without googling?"
+    <main class="content">
+      <h1>Chapter N: Title</h1>
+      <!-- content from original -->
+
+      <div class="nav">
+        <a href="prev.html">← Previous</a>
+        <a href="next.html">Next →</a>
+      </div>
+
+      <div class="attribution">
+        <p>Original: <a href="https://zekcrates.quarto.pub/deep-learning-library/original.html">zekcrates/original</a></p>
+      </div>
+    </main>
+  </div>
+  <script src="copy.js"></script>
+</body>
+</html>
+```
+
+## Styling Elements
+
+- `<div class="hint">` — for tips, notes, and supplementary info
+- `<div class="note">` — for important callouts
+- `<pre><code>` — for code blocks
+- `<hr>` — for section breaks within a chapter
 
 ## Attribution
 
-Every page links to the original zekcrates tutorial. Revised pages note "(revised for clarity)" in the attribution.
+Every page links to the original zekcrates tutorial in the attribution section.

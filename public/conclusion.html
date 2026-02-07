@@ -31,54 +31,30 @@
     <main class="content">
       <h1>Chapter 13: Conclusion</h1>
 
-      <p>Congratulations on completing the babygrad tutorial! You have built a functional deep learning library from scratch.</p>
+      <p>We tried to cover a few things, and hope you had fun doing it. Try to add your own layers, re-engineer the autograd engine, or optimize the loops For those looking to dive deeper, the true power and complexity lie in understanding what <code>numpy</code> is doing under the hood(which is beautiful). Fascinating topics to explore include:</p>
 
-      <h2>What You Built</h2>
       <ul>
-        <li><strong>Tensor</strong>: A data structure that tracks computation history</li>
-        <li><strong>Autograd</strong>: Automatic differentiation via reverse-mode backpropagation</li>
-        <li><strong>Neural Network Modules</strong>: Composable building blocks for models</li>
-        <li><strong>Optimizers</strong>: SGD and Adam for parameter updates</li>
-        <li><strong>Data Handling</strong>: Dataset and DataLoader abstractions</li>
-        <li><strong>Initialization</strong>: Xavier and Kaiming weight initialization</li>
-        <li><strong>Model Persistence</strong>: Save and load model weights</li>
-        <li><strong>Trainer</strong>: High-level training loop abstraction</li>
-        <li><strong>Convolutions</strong>: 2D convolutional layers with im2col optimization</li>
+        <li>How a matrix is organized inside memory.</li>
+        <li>The concepts of strides and offsets that define memory layout.</li>
+        <li>The broadcasting rules and reshaping.</li>
       </ul>
 
-      <h2>Extending Your Learning</h2>
-      <p>Consider these next steps:</p>
-      <ul>
-        <li>Add custom layers to the library</li>
-        <li>Redesign the autograd engine for better efficiency</li>
-        <li>Optimize computational loops with vectorization</li>
-      </ul>
+      <p>The next thing could be creating our own low-level backend, one that is powered by C++ and supports both CPU and GPU execution.</p>
 
-      <h2>Deeper Topics to Explore</h2>
-      <p>To truly understand deep learning frameworks, study:</p>
-      <ul>
-        <li>How a matrix is organized inside memory</li>
-        <li>The concepts of strides and offsets that define memory layout</li>
-        <li>Broadcasting rules and reshaping operations</li>
-      </ul>
+      <p>What we did in this book was pretty basic and focused on high-level, simple implementations, without much detailed consideration of underlying memory management, low-level systems programming, or GPU parallel architectures.</p>
 
-      <h2>Future Directions</h2>
-      <p>A logical next step involves creating your own low-level backend, one that is powered by C++ and supports both CPU and GPU execution.</p>
+      <p>If this book has provided you with some value, please consider supporting my work. Your support allows me to keep building and writing.</p>
 
-      <p>This tutorial took a pretty basic approach, focused on high-level, simple implementations, without much detailed consideration of underlying memory management, low-level systems programming, or GPU parallel architectures. These are rich areas for further exploration.</p>
+      <p>Thank you for reading!</p>
 
-      <h2>Resources</h2>
-      <ul>
-        <li><a href="https://github.com/karpathy/micrograd">micrograd</a> - Andrej Karpathy's tiny autograd engine</li>
-        <li><a href="https://pytorch.org/tutorials/">PyTorch Tutorials</a> - Official PyTorch documentation</li>
-        <li><a href="https://www.deeplearning.ai/">Deep Learning Specialization</a> - Andrew Ng's courses</li>
-      </ul>
-
-      <h2>Thank You</h2>
-      <p>Thank you for reading! If you found this tutorial helpful, consider supporting the original author.</p>
+      <div class="hint">
+        <strong>Support This Project</strong>
+        <p>If this book helped you, consider <a href="https://zekcrates.gumroad.com/l/deep-learning-library">paying what you want on Gumroad</a></p>
+        <p><strong>Questions or feedback?</strong> <a href="mailto:zekcrates@proton.me">zekcrates@proton.me</a></p>
+      </div>
 
       <div class="nav">
-        <a href="solutions.html">&larr; Solutions</a>
+        <a href="examples.html">&larr; Examples</a>
         <a href="index.html">Back to Home &rarr;</a>
       </div>
 
