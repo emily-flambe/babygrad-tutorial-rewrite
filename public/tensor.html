@@ -118,33 +118,32 @@ np.array([[1, 2], [3, 4]]) # nested list → 2D array</code></pre>
       <pre><code>import numpy as np
 
 class Tensor:
-    def __init__(self, data, *, device=None, dtype="float32", requires_grad=True):
+    def __init__(self, input, *, device=None, dtype="float32", requires_grad=True):
         """
         Create a new tensor.
 
         Args:
-            data: Array-like data (list, numpy array, or another Tensor)
+            input: Array-like input (list, numpy array, or another Tensor)
             device: Device placement (currently ignored, CPU only)
             dtype: Data type for the array
             requires_grad: Whether to track gradients for this tensor
         """
         # Step 1: Normalize the input to a numpy array
-        # We need to handle three cases and end up with `data` being a numpy array
 
-        if isinstance(data, Tensor):
+        if isinstance(input, Tensor):
             # Case 1: Unwrap the Tensor
-            data = _____
+            input = _____
 
-        elif isinstance(data, np.ndarray):
+        elif isinstance(input, np.ndarray):
             # Case 2: Already a numpy array
             pass
 
         else:
             # Case 3: Something else (list, scalar, etc.)
-            data = _____
+            input = _____
 
         # Store with the correct dtype
-        self.data = data.astype(dtype)
+        self.data = input.astype(dtype)
 
         # Initialize remaining attributes
         self.requires_grad = _____
