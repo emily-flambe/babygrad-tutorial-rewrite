@@ -132,31 +132,26 @@ class Tensor:
         # We need to handle three cases and end up with `data` being a numpy array
 
         if isinstance(data, Tensor):
-            # Case 1: data is a Tensor
-            # We need to extract the numpy array from inside it
-            # A Tensor's numpy array is stored in its .data attribute
-            data = _____  # What attribute of the input Tensor contains the numpy array?
+            # Case 1: Unwrap the Tensor
+            data = _____
 
         elif isinstance(data, np.ndarray):
-            # Case 2: data is already a numpy array
-            # Nothing to do—it's already what we want
-            data = data
+            # Case 2: Already a numpy array
+            pass
 
         else:
-            # Case 3: data is something else (list, scalar, tuple, etc.)
-            # Use np.array() to convert it
-            data = _____  # How do you convert something to a numpy array?
+            # Case 3: Something else (list, scalar, etc.)
+            data = _____
 
-        # Step 2: Store it with the correct dtype
-        # At this point, `data` is a numpy array. Convert it to the requested dtype.
+        # Store with the correct dtype
         self.data = data.astype(dtype)
 
-        # Step 3: Initialize the other attributes
-        self.requires_grad = _____   # Use the requires_grad parameter passed to __init__
-        self.grad = _____            # No gradient computed yet—what value represents "nothing"?
-        self._device = _____         # Use the device parameter, but default to "cpu" if None
-        self._op = _____             # No operation created this tensor—what value represents "nothing"?
-        self._inputs = _____         # No input tensors—what's an empty collection?</code></pre>
+        # Initialize remaining attributes
+        self.requires_grad = _____
+        self.grad = _____
+        self._device = _____
+        self._op = _____
+        self._inputs = _____</code></pre>
 
       <div class="hint">
         <strong>Understanding <code>isinstance()</code></strong><br>
