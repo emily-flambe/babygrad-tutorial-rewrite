@@ -57,12 +57,24 @@
       <table>
         <tr><th>Attribute</th><th>What it is</th></tr>
         <tr><td><code>data</code></td><td>The actual numbers (always a numpy array)</td></tr>
-        <tr><td><code>dtype</code></td><td>Data type, like "float32" or "int64"</td></tr>
+        <tr><td><code>dtype</code></td><td>The type of the <em>elements</em> in the array (see below)</td></tr>
         <tr><td><code>grad</code></td><td>Gradients computed during backpropagation (starts as None)</td></tr>
         <tr><td><code>requires_grad</code></td><td>Should we track this tensor for gradient computation?</td></tr>
         <tr><td><code>_op</code></td><td>What operation created this tensor (None for tensors you create directly)</td></tr>
         <tr><td><code>_inputs</code></td><td>What tensors were used to create this one (empty list for tensors you create directly)</td></tr>
       </table>
+
+      <h3>What's dtype?</h3>
+
+      <p>A numpy array is always an <code>ndarray</code> object, but the <em>elements inside</em> can be different numeric types:</p>
+
+      <pre><code>np.array([1, 2, 3])                  # int64 (default for integers)
+np.array([1.0, 2.0, 3.0])            # float64 (default for floats)
+np.array([1, 2, 3], dtype="float32") # float32 (explicit)</code></pre>
+
+      <p>Deep learning typically uses <code>float32</code> because it's precise enough for neural network math, uses half the memory of <code>float64</code>, and GPUs are optimized for it. That's why our Tensor defaults to <code>dtype="float32"</code>.</p>
+
+      <h3>What's _op and _inputs?</h3>
 
       <p>The last two (<code>_op</code> and <code>_inputs</code>) are how we build the computation graph. When you do <code>c = a + b</code>, the resulting tensor <code>c</code> will have <code>_op = "add"</code> and <code>_inputs = [a, b]</code>. That's how it "remembers" its history.</p>
 
