@@ -31,14 +31,14 @@
     <main class="content">
       <h1>Chapter 10: Convolutional NN</h1>
 
-      <p>Lets take an image of (64,64,6) (H,W,C) dimensions, Can we train this single image so that our model predicts the ideal output? One obvious and simple thing would be to simply use a <code>Linear</code> layer and do the training.</p>
+      <p>Let's take an image of (64,64,6) (H,W,C) dimensions. Can we train this single image so that our model predicts the ideal output? One obvious and simple thing would be to simply use a <code>Linear</code> layer and do the training.</p>
 
       <pre><code>model = nn.Linear(64*64*6,10)
 image = tensor.randn(1,64,64,6)
 image = image.reshape(1,-1)
 output = model(image)</code></pre>
 
-      <p>This is doable but not preferable. Why? Lets think in term of amount of computation required</p>
+      <p>This is doable but not preferable. Why? Let's think in terms of the amount of computation required.</p>
 
       <p><strong>64*64*6 = 24576</strong></p>
 
@@ -59,7 +59,7 @@ output = model(image)</code></pre>
 
       <div class="hint">
         <h4>What are Spatial Dimensions?</h4>
-        <p>Dimensions which represents a physical space (H,W).</p>
+        <p>Dimensions that represent a physical space (H,W).</p>
       </div>
 
       <p>Why are big weights a problem? You might ask: "Aren't big models better? Don't we want more parameters to learn more things?"</p>
@@ -68,7 +68,7 @@ output = model(image)</code></pre>
 
       <ul>
         <li>The model does not capture relationships between neighboring pixels.</li>
-        <li>Each pixel is treated independently, ignoring spatial structure</li>
+        <li>Each pixel is treated independently, ignoring spatial structure.</li>
         <li>The model struggles to recognize slightly transformed versions of the same image (e.g., cropped/rotated image)</li>
       </ul>
 
@@ -82,9 +82,9 @@ output = model(image)</code></pre>
 
       <h2>10.1 Convolutional Neural Networks</h2>
 
-      <p>TO understand an images features We can't look at the image completely at once but little by little. CNN's will understand the spatial features and will have less parameters than the above model. They use a <strong>kernel</strong> or <strong>filter</strong> <strong>that is a small matrix of shape (K,K)</strong>. This small matrix will move (convolve) over the spatial dimensions of the image and does <strong>the dot product to produce one single output pixel value.</strong></p>
+      <p>To understand an image's features, we can't look at the image completely at once but little by little. CNNs will understand the spatial features and will have fewer parameters than the above model. They use a <strong>kernel</strong> or <strong>filter</strong> <strong>that is a small matrix of shape (K,K)</strong>. This small matrix will move (convolve) over the spatial dimensions of the image and does <strong>the dot product to produce one single output pixel value.</strong></p>
 
-      <p>At ever step:</p>
+      <p>At every step:</p>
 
       <ul>
         <li>Look at the (k,k) patch in the image.</li>
@@ -101,9 +101,9 @@ output = model(image)</code></pre>
 
       <h3>10.2.1 Padding</h3>
 
-      <p>When a <strong>kernel</strong> moves over an image, it starts from top-left corner and slides across the image. But clearly we can observe that the edge pixels are used less and also our output gets smaller. If we want to use the edge pixels equally and also to have the same output size we would consider padding.</p>
+      <p>When a <strong>kernel</strong> moves over an image, it starts from the top-left corner and slides across the image. But clearly we can observe that the edge pixels are used less and also our output gets smaller. If we want to use the edge pixels equally and also to have the same output size, we would consider padding.</p>
 
-      <p>Padding is just adding additional zero's in the spatial dimensions.</p>
+      <p>Padding is just adding additional zeros in the spatial dimensions.</p>
 
       <p>How much to pad? Can we decide it? If we want the Output Size to equal the Input Size (assuming Stride=1), this simple formula tells us the padding</p>
 
@@ -122,23 +122,23 @@ output = model(image)</code></pre>
         <li>Stride 2: Moves 2 pixels</li>
       </ul>
 
-      <p>Using all the available Hyperparameters we can safely calculate the output size by the given formula below</p>
+      <p>Using all the available hyperparameters, we can safely calculate the output size by the given formula below.</p>
 
       <p><strong>Output Size = (Input + 2 * Padding - Kernel) / Stride + 1</strong></p>
 
       <h2>10.3 Simple Convolution</h2>
 
-      <p>Lets start implementing a simple Convolution using normal <strong>loops</strong>. Before we write the code, we need to address a common point of confusion. We previously said a kernel is size (K,K). However, when working with actual code and RGB images, our tensors are 4-Dimensional</p>
+      <p>Let's start implementing a simple convolution using normal <strong>loops</strong>. Before we write the code, we need to address a common point of confusion. We previously said a kernel is size (K,K). However, when working with actual code and RGB images, our tensors are 4-dimensional.</p>
 
       <div class="note">
         <h4>Why 4 dimensions for kernel too?</h4>
-        <p>You might ask: "I thought the kernel was just a small (K,K) square?" It is true but images also have <strong>depth</strong> or <strong>Channels</strong></p>
+        <p>You might ask: "I thought the kernel was just a small (K,K) square?" That is true, but images also have <strong>depth</strong> or <strong>channels</strong>.</p>
         <ul>
           <li><strong>Input Depth Match</strong>: If the input image has C_in Channels, the kernel must also have C_in Channels to process all the Channels at once.</li>
         </ul>
       </div>
 
-      <p>We will Work with:</p>
+      <p>We will work with:</p>
 
       <ul>
         <li>Image (N,H,W,C_in):</li>
@@ -147,11 +147,11 @@ output = model(image)</code></pre>
         <li>Stride=1</li>
       </ul>
 
-      <p>Lets first find the shape of the output image after once passing through the function. We know that the shape of output image must be</p>
+      <p>Let's first find the shape of the output image after passing once through the function. We know that the shape of the output image must be</p>
 
       <p><strong>(N, new_height, new_width, c_out)</strong></p>
 
-      <p>What should the dimensions <strong>new_height and new_width</strong> be? Lets use our formula from above:</p>
+      <p>What should the dimensions <strong>new_height and new_width</strong> be? Let's use our formula from above:</p>
 
       <p><strong>Output Size = (Input + 2 * Padding - Kernel) / Stride + 1</strong></p>
 
@@ -184,7 +184,7 @@ def simple_conv(image, weight):
 
     return out</code></pre>
 
-      <p>This above code does the job but it so slow. Lets use some magic to make it faster</p>
+      <p>The above code does the job but it is so slow. Let's use some magic to make it faster.</p>
 
       <h2>10.4 Convolution as Matrix Multiplication</h2>
 
@@ -395,11 +395,11 @@ print(output)
         <li>Reshaping</li>
       </ul>
 
-      <p>Before going to the actual python implementation of the code lets first understand a little bit about how matrix is placed inside the memory</p>
+      <p>Before going to the actual Python implementation of the code, let's first understand a little bit about how a matrix is placed inside memory.</p>
 
       <h3>10.6.1 Matrix and memory</h3>
 
-      <p>When you create a (3x3) matrix in NumPy, how is it stored? Is it a grid? Or some magic way? <strong>The matrix is stored in a 1D array.</strong> It doesn't matter how many dimensions the matrix has; all of them are stored linearly. The memory in our computer is just a linear tape of bytes. Lets take an example</p>
+      <p>When you create a (3x3) matrix in NumPy, how is it stored? Is it a grid? Or some magic way? <strong>The matrix is stored in a 1D array.</strong> It doesn't matter how many dimensions the matrix has; all of them are stored linearly. The memory in our computer is just a linear tape of bytes. Let's take an example.</p>
 
       <pre><code>A = np.array([
     [0, 1, 2],
@@ -524,7 +524,7 @@ def conv(a, b, stride=1, padding=1):
 | 6  5  4 |
 | 3  2  1 |</code></pre>
 
-      <p>Lets implement <strong>Flip</strong>.</p>
+      <p>Let's implement <strong>Flip</strong>.</p>
 
       <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
 
@@ -571,9 +571,9 @@ def flip(a, axes):
 
       <p>Notice how each value is now separated by zeros. If the <strong>forward pass used stride=2, we need dilation=1 (which means "1 zero between each element")</strong> to restore the proper spacing.</p>
 
-      <p>How to implement a dilate function then? Lets assume we have a zero-filled array of the input shape, then we just need to fill the indices with <code>out_grad</code> matrix and skip when needed.</p>
+      <p>How do we implement a dilate function then? Let's assume we have a zero-filled array of the input shape. Then we just need to fill the indices with the <code>out_grad</code> matrix and skip when needed.</p>
 
-      <p>Lets assume we have a 1D array</p>
+      <p>Let's assume we have a 1D array:</p>
 
       <pre><code>a = [1,2,3]</code></pre>
 
@@ -591,7 +591,7 @@ new_a[0,len(new_a), 2] = a
 
       <p><strong>Newaxis = Oldaxis + (Oldaxis - 1) x Dilation</strong></p>
 
-      <p>Lets implement <code>Dilate</code>.</p>
+      <p>Let's implement <code>Dilate</code>.</p>
 
       <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
 
@@ -627,7 +627,7 @@ def dilate(a, axes, dilation=1):
         </div>
       </div>
 
-      <p>Lets now try to implement <code>conv.backward</code>. We have 2 things to return <code>grad_a</code> and <code>grad_b</code>.</p>
+      <p>Let's now try to implement <code>conv.backward</code>. We have 2 things to return: <code>grad_a</code> and <code>grad_b</code>.</p>
 
       <p>We are sure that <code>out_grad</code> is smaller than inputs. If <code>stride</code> > 1 then no matter what, we will do the <strong>dilation</strong>.</p>
 
@@ -746,11 +746,11 @@ def conv(a, b, stride=1, padding=1):
 
       <h2>10.9 nn.Conv</h2>
 
-      <p>This will be pretty simple to implement we will just need to use the <code>ops.conv</code> we implemented earlier and thats it.</p>
+      <p>This will be pretty simple to implement. We will just need to use the <code>ops.conv</code> we implemented earlier and that's it.</p>
 
       <p><strong>FILE</strong>: <strong>baby/nn.py</strong></p>
 
-      <p>Many images dataset return in <code>NCHW</code> so we have to first <code>transpose</code> them to <code>NHWC</code> and then call <code>ops.conv</code> that was written above. And then again <code>tranpose</code> back to the original form.</p>
+      <p>Many image datasets return in <code>NCHW</code>, so we have to first <code>transpose</code> them to <code>NHWC</code> and then call <code>ops.conv</code> that was written above. And then again <code>transpose</code> back to the original form.</p>
 
       <div class="exercise">
         <h3>Exercise 10.2</h3>

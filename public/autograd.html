@@ -33,6 +33,10 @@
     <main class="content">
       <h1>Chapter 3: Automatic Differentiation</h1>
 
+      <div class="revised">
+        <strong>✓ Revised for clarity.</strong> This chapter has been rewritten with more detailed explanations.
+      </div>
+
       <p>Yay! We will do some magic here. Automatic Differentiation (or Autograd) is the heart of every deep learning library. It allows us to calculate how much every single parameter in our model contributed to the final error, without us having to write the math by hand for every new model.</p>
 
       <div class="note">
@@ -85,7 +89,7 @@ class Function:
 
       <p>This is simple Base class for All our Functions. All the <strong>Functions</strong> will be subclass of <strong>Function</strong>.</p>
 
-      <p>What does the <strong>forward</strong> method return? <strong>Numpy Arrays</strong>! Should we wrap the <strong>Output</strong> around the <code>Tensor</code> class ?</p>
+      <p>What does the <strong>forward</strong> method return? <strong>Numpy Arrays</strong>! Should we wrap the output in a <code>Tensor</code>?</p>
 
       <p>Yes! because this <strong>Output</strong> will be used for further calculations and is a part of <strong>computation graph</strong>.</p>
 
@@ -95,49 +99,48 @@ class Function:
         <li>Wrap those values inside <code>Tensor</code>.</li>
       </ul>
 
-      <p>The first function is unique to all the <strong>Operations</strong>. But Wrapping is common to all.</p>
+      <p>Each mathematical operation (addition, multiplication, etc.) will need its own <code>forward</code> method, but the wrapping logic is the same for all of them.</p>
 
-      <p>So Why not use some common function ?</p>
+      <p>Since the wrapping logic is identical for every operation, we can put it in one shared method instead of duplicating it in every <code>forward()</code>. We'll use <code>__call__</code> for this.</p>
 
-      <p>We will use <code>__call__</code> method that will help us.</p>
+      <p><code>__call__</code> is a Python special method that makes an object callable like a function. When you write <code>Add()(a, b)</code>, Python runs <code>Add().__call__(a, b)</code>.</p>
 
-      <p>Lets question what should the <code>__call__</code> method will do?</p>
-      <ul>
-        <li>Takes inputs(Tensors). We expect the inputs to be of type <code>Tensor</code>.</li>
-        <li>Gets <strong>.data</strong> of those inputs.</li>
-        <li>Calls <strong>forward()</strong> using data from inputs.</li>
-        <li>Wraps the output to a <code>Tensor</code>.</li>
-        <li>Returns.</li>
-      </ul>
+      <p>Here's what <code>__call__</code> will do:</p>
+      <ol>
+        <li>Accept Tensor inputs</li>
+        <li>Extract <code>.data</code> (the numpy arrays) from each input</li>
+        <li>Call <code>forward()</code> with those numpy arrays</li>
+        <li>Wrap the result in a new Tensor</li>
+        <li>Record <code>_op</code> and <code>_inputs</code> for the computation graph</li>
+        <li>Return the new Tensor</li>
+      </ol>
 
       <p><strong>File</strong> : <strong>babygrad/ops.py</strong></p>
 <pre><code class="language-python">class Function:
-    def __call__(self, *inputs):                        # Takes inputs
-        requires_grad = any(t.requires_grad for t in inputs)
-        inputs_data =[t.data for t in inputs]           # Gets .data .
-        output_data = self.forward(*inputs_data)        # Calls forward.
-        #wrap around Tensor
+    def __call__(self, *args):                          # Takes inputs
+        requires_grad = any(t.requires_grad for t in args)
+        inputs_data = [t.data for t in args]            # Gets .data
+        output_data = self.forward(*inputs_data)        # Calls forward
+        # Wrap in Tensor
         output_tensor = Tensor(output_data, requires_grad=requires_grad)
         if requires_grad:
-            output_tensor._op = self                    #Save operation
-            output_tensor._inputs = inputs              #Save parents
+            output_tensor._op = self                    # Save operation
+            output_tensor._inputs = args                # Save parents
         return output_tensor</code></pre>
 
       <div class="note">
-        <p>Notice the requires_grad logic in <strong>__call__</strong>. If any of the input tensors require a gradient, the output tensor must also require a gradient. This ensures the "tracking" persists through the whole network.</p>
+        <p>Notice the <code>requires_grad</code> check: if any input requires a gradient, the output must too. This ensures gradient tracking propagates through the entire computation.</p>
       </div>
 
-      <p>Why did we do <strong>output_tensor._op = self</strong> and <strong>output_tensor._inputs =inputs</strong> ?</p>
+      <p><strong>Why store <code>_op</code> and <code>_inputs</code>?</strong></p>
 
-      <p>Lets see what actually happened.</p>
-
-      <p>We called forward method , which does something and gives us the result. To do this <strong>something</strong> we needed :</p>
+      <p>The <code>forward</code> method computes the result, but that's only half the story. During the backward pass, we'll need to know:</p>
       <ul>
-        <li>Parents</li>
-        <li>The operation</li>
+        <li>What operation created this tensor (<code>_op</code>)</li>
+        <li>What tensors were its inputs (<code>_inputs</code>)</li>
       </ul>
 
-      <p>So we are just storing them. Each <strong>child</strong> stores the information about its <strong>parents</strong>. Think of it like a family tree. By storing its parents and the story of its creation, the child tensor has all the information it will need later to pass gradients back to those parents. This chain of history is what will make automatic differentiation possible.</p>
+      <p>Each tensor stores its "parents" and how it was created—like a family tree. This chain of history is what makes automatic differentiation possible: when we compute gradients, we walk backward through the graph, and each tensor knows exactly where to pass its gradients.</p>
 
 <pre><code class="language-python">from baby import Tensor
 a = Tensor([1,2,3])
@@ -152,11 +155,11 @@ print(c._inputs)    #who are the parents? [a,b]
 >>> [Tensor([1. 2. 3.], requires_grad=True), Tensor([2. 3. 4.],
      requires_grad=True)]</code></pre>
 
-      <p>Now that we are done with <code>Function</code> class. We can now add some operations.</p>
+      <p>Now that we're done with the <code>Function</code> class, we can add some operations.</p>
 
       <h2>3.2 Forward Pass</h2>
 
-      <p>Forward pass is pretty straightforward: Two inputs go through some operation and produce a single output value.</p>
+      <p>The forward pass is straightforward: two inputs go through some operation and produce a single output value.</p>
 
       <p>The operation here could be:</p>
       <ul>
@@ -186,13 +189,11 @@ class Mul(Op):
 def mul(a, b):
     return Mul()(a, b)</code></pre>
 
-      <p>Seriously how hard was it? We just completed the forward pass of Add().</p>
-
-      <p><strong>File</strong> : <strong>baby/ops.py</strong></p>
+      <p>Not too hard, right? We just completed the forward pass of <code>Add()</code>.</p>
 
       <div class="hint">
         <strong>Exercise 3.1</strong>
-        <p>Write the <code>forward</code> method for all these classes .</p>
+        <p>Write the <code>forward</code> method for all these classes:</p>
         <ul>
           <li>Sub</li>
           <li>Div</li>
@@ -218,7 +219,7 @@ def mul(a, b):
 
       <h2>3.3 Integrating Functions inside the Tensor Class</h2>
 
-      <p>So we have done <code>forward</code> methods for few functions, but still how do we use them? How do we link them to <code>Tensor</code> class?</p>
+      <p>We've written <code>forward</code> methods for a few functions, but how do we actually use them? How do we link them to the <code>Tensor</code> class?</p>
 
       <p>We need to <strong>method overload</strong> the functions. This means that whenever we perform operations like <code>x + y</code> between two <code>Tensor</code> objects, it will use our <code>Function</code> class (e.g., <code>Add</code>) under the hood instead of Python's default addition.</p>
 
@@ -238,7 +239,7 @@ def mul(a, b):
         return self.__add__(other)
     </code></pre>
 
-      <p>Now we can Add 2 <code>Tensor's</code> without any problem. The <code>Tensor_a</code> + <code>Tensor_b</code> will just work.</p>
+      <p>Now we can add two Tensors without any problem. <code>tensor_a + tensor_b</code> will just work.</p>
 
       <p><strong>File</strong>: <strong>babygrad/tensor.py</strong></p>
 
@@ -266,13 +267,13 @@ def mul(a, b):
       <p>In the Forward Pass, data flows from inputs to outputs to get a result. In the Backward Pass, we go in reverse. We start with the final error and walk backward through our family tree to figure out: "How much is each parent responsible for this error?"</p>
 
       <div class="hint">
-        <strong>What is Gradient?</strong>
-        <p>It is a measure of how much the final error changes when we change a specific input or weight</p>
+        <strong>What is a gradient?</strong>
+        <p>A measure of how much the final error changes when we change a specific input or weight.</p>
       </div>
 
-      <p><strong>Local derivatives</strong> are the heart of the <strong>Chain Rule</strong>. The "magic" of Autograd is that it breaks a massive problem into small, manageable pieces using <strong>Local Derivatives</strong>.</p>
+      <p><strong>Local derivatives</strong> are the heart of the <strong>chain rule</strong>. The "magic" of autograd is that it breaks a massive problem into small, manageable pieces using local derivatives.</p>
 
-      <p>Instead of trying to solve for a 100-layer neural network all at once, we solve it for one operation at a time. Each <code>Function</code> class only needs to know its own local derivative. When we chain them together during the backward pass, these local pieces multiply together via <strong>the Chain Rule</strong>to give us the global gradient for every parameter in the system.</p>
+      <p>Instead of trying to solve for a 100-layer neural network all at once, we solve it one operation at a time. Each <code>Function</code> class only needs to know its own local derivative. When we chain them together during the backward pass, these local pieces multiply together via the chain rule to give us the global gradient for every parameter in the system.</p>
 
       <p><strong>Example</strong></p>
 
@@ -286,13 +287,13 @@ d = c + babygrad.Tensor([3, 5, 3], dtype="float32")</code></pre>
 
       <p>$$\frac{\partial d}{\partial b} = \frac{\partial d}{\partial c} \cdot \frac{\partial c}{\partial b}$$</p>
 
-      <p>As we said that gradient flows from right to left. The question is what is the gradient of output?</p>
+      <p>As we said, gradients flow from right to left. The question is: what is the gradient of the output?</p>
 
       <p>$$\frac{\partial d}{\partial d} = 1$$</p>
 
       <p>It is simply just <strong>1</strong>. This is the <strong>upstream derivative</strong>. This upstream gradient of 1 flows backward into c. Then c applies its local derivative (\(\frac{\partial c}{\partial a} = 1\), \(\frac{\partial c}{\partial b} = 1\)) and passes gradients further to a and b.</p>
 
-      <p>Lets look at the backward pass of Add</p>
+      <p>Let's look at the backward pass of <code>Add</code>:</p>
 
 <pre><code class="language-python">class Add(Function):
     def forward(self, a: NDArray, b: NDArray):
@@ -354,11 +355,11 @@ class Mul(Function):
 
       <hr>
 
-      <p>These above functions are pretty easy to implement. Now we will implement the most rewarding functions.</p>
+      <p>The above functions are easy to implement. Now let's tackle the more interesting ones.</p>
 
       <h3>3.4.1 Reshape</h3>
 
-      <p><code>Reshape</code> function is the simplest shape-changing operation. In the forward pass, we take the data and arrange it into a new shape (e.g., turning a \(1 \times 6\) vector into a \(2 \times 3\) matrix). Under the hood it not creating a new memory but it's just changing how it views that data.</p>
+      <p><code>Reshape</code> is the simplest shape-changing operation. In the forward pass, we take the data and arrange it into a new shape (e.g., turning a \(1 \times 6\) vector into a \(2 \times 3\) matrix). Under the hood, it's not creating new memory—it's just changing how it views that data.</p>
 
       <p>$$\begin{aligned}
 \text{Original matrix } A &= \begin{pmatrix}
@@ -388,13 +389,11 @@ class Mul(Function):
         <li>Now <code>out_grad</code> is of shape (4,3).</li>
       </ul>
 
-      <p>Need to convert shape of <code>out_grad</code> to shape of <strong>A</strong>. To pass this gradient back to the input, we must ensure the shapes match. Since reshaping doesn't change the values but only their positions the backward pass is just a <strong>reshape</strong> in the opposite direction.</p>
-
-      <p><strong>File</strong> : <strong>baby/ops.py</strong></p>
+      <p>We need to convert the shape of <code>out_grad</code> back to the shape of <strong>A</strong>. To pass this gradient back to the input, we must ensure the shapes match. Since reshaping doesn't change the values—only their positions—the backward pass is just a reshape in the opposite direction.</p>
 
       <div class="hint">
         <strong>Exercise 3.4</strong>
-        <p>Lets write the <strong>Reshape</strong> class.</p>
+        <p>Let's write the <code>Reshape</code> class.</p>
 <pre><code class="language-python">
 class Reshape(Function):
     def __init__(self, shape):
@@ -432,10 +431,10 @@ c & f
 \end{pmatrix}_{3 \times 2}
 \end{aligned}$$</p>
 
-      <p>The Input axes can:</p>
+      <p>The input axes can:</p>
       <ul>
-        <li>Have no axes to tranpose, in that case we need to tranpose the last <strong>2 axes</strong>.</li>
-        <li>Tranpose whatever axes is provided.</li>
+        <li>Have no axes specified—in that case, we transpose the last two axes.</li>
+        <li>Transpose whatever axes are provided.</li>
       </ul>
 
       <p><strong>Backward Pass</strong></p>
@@ -444,32 +443,31 @@ c & f
 
       <p>$$(A^T)^T = A$$</p>
 
-      <p>For backward pass doing the <code>tranpose</code> will work but only on 2D matrices. For ND matrices we might do something different and simple.</p>
+      <p>For the backward pass, a simple transpose will work for 2D matrices. For ND matrices, we need a slightly different approach.</p>
 
-      <p>Lets say we had a matrix :</p>
+      <p>Let's say we had a matrix:</p>
       <ul>
         <li>Original Axes order: (0, 1, 2) and Shape: (3, 2, 5)</li>
         <li>Forward Pass: Transpose(1, 2, 0) and Shape: (2, 5, 3)</li>
         <li>The Goal: Move the gradient from (2, 5, 3) back to (3, 2, 5)</li>
       </ul>
 
-      <p>For any <strong>ND</strong> matrix that has been tranposed , we just need to know where the intial axes order currently is.</p>
+      <p>For any ND matrix that has been transposed, we just need to know where the original axes ended up.</p>
 
-      <p>Current axis order: (1,2,0) and Shape: (2, 5, 3) - Where is 0 in the current axes order? At 2 - Where is 1 in the current axes order? At 0 - Where is 2 in the current axes order? At 1</p>
+      <p>Current axis order: (1, 2, 0) with shape (2, 5, 3). Where did each original axis go?</p>
+      <ul>
+        <li>Where is 0 in the current order? At position 2.</li>
+        <li>Where is 1 in the current order? At position 0.</li>
+        <li>Where is 2 in the current order? At position 1.</li>
+      </ul>
 
-      <p>The result we get = (2,0,1)</p>
+      <p>The result: (2, 0, 1). If we apply <code>transpose</code> to <code>out_grad</code> using this result, we get the original shape back.</p>
 
-      <p>If we apply <code>transpose</code> to <code>out_grad</code> using this result Do you think we get the original shape?</p>
-
-      <p>The question is how do we get this result? How do we know the order? How can we know the order after <strong>forward pass</strong> is done?</p>
-
-      <p>We have <code>np.argsort</code> that gives us this order details. If we apply <code>np.argsort((1,2,0))</code> we get <strong>(2,0,1)</strong>.</p>
-
-      <p><strong>File</strong> : <strong>babygrad/ops.py</strong></p>
+      <p>How do we compute this? <code>np.argsort</code> gives us exactly what we need. If we apply <code>np.argsort((1, 2, 0))</code>, we get <strong>(2, 0, 1)</strong>.</p>
 
       <div class="hint">
         <strong>Exercise 3.5</strong>
-        <p>Lets write the <strong>Transpose</strong> class.</p>
+        <p>Let's write the <code>Transpose</code> class.</p>
 <pre><code class="language-python">class Transpose(Function):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
@@ -516,30 +514,28 @@ A &= \begin{pmatrix}
 \end{pmatrix}
 \end{aligned}$$</p>
 
-      <p>We can safely observe that for <strong>whatever <code>axis</code> we are applying the <code>summation</code> that axis vanishes or becomes <code>1</code></strong></p>
+      <p>Notice that whatever axis we sum over, that axis vanishes (or becomes 1).</p>
 
       <p><strong>Backward pass</strong></p>
 
-      <p>In the <strong>backward pass</strong>, our <strong>out_grad</strong> is smaller than the original input. To get the "gradients" back to the parents, we have to stretch the gradient back to the original shape.</p>
+      <p>In the backward pass, <code>out_grad</code> is smaller than the original input. To pass gradients back to the parents, we have to stretch the gradient back to the original shape.</p>
 
-      <p>Think it like this:</p>
+      <p>Think of it like this:</p>
       <ul>
-        <li>Reshape: Put "1" back into the axis that was vanished so the dimensions align.</li>
-        <li>Multiply: Multiply the reshaped array with array of <strong>(ones of shape parent_shape)</strong></li>
+        <li><strong>Reshape:</strong> Put "1" back into the axis that vanished so the dimensions align.</li>
+        <li><strong>Multiply:</strong> Multiply the reshaped array by an array of ones with the parent's shape.</li>
       </ul>
 
-      <p>Example: (3,3)</p>
+      <p>Example with shape (3, 3):</p>
       <ul>
-        <li>axis=None Result is shape(1,). First reshape to (1,1). Then multiply (1,1)* (3,3)</li>
-        <li>axis=0 Result is shape (3,). First reshape to (1,3). Then multiply (1,3) * (3,3)</li>
-        <li>axis=1 Result is shape (3,). First reshape to (3,1) then multiply with (3,1) * (3,3)</li>
+        <li><code>axis=None</code>: Result has shape (1,). Reshape to (1, 1), then multiply (1, 1) * (3, 3).</li>
+        <li><code>axis=0</code>: Result has shape (3,). Reshape to (1, 3), then multiply (1, 3) * (3, 3).</li>
+        <li><code>axis=1</code>: Result has shape (3,). Reshape to (3, 1), then multiply (3, 1) * (3, 3).</li>
       </ul>
-
-      <p><strong>File</strong> : <strong>babygrad/ops.py</strong></p>
 
       <div class="hint">
         <strong>Exercise 3.6</strong>
-        <p>Lets write the <strong>Summation</strong> class.</p>
+        <p>Let's write the <code>Summation</code> class.</p>
 <pre><code class="language-python">class Summation(Function):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
@@ -559,7 +555,7 @@ def summation(a, axes=None):
 
       <h3>3.4.4 BroadcastTo</h3>
 
-      <p>In an Ideal world all tensors would have the same shape. But in our world we would like to broadcast a matrix of shape (3,1) to (3,3).</p>
+      <p>In an ideal world, all tensors would have the same shape. But in practice, we often need to broadcast a matrix of shape (3, 1) to (3, 3).</p>
 
       <p>$$\begin{bmatrix}
 a \\
@@ -577,27 +573,24 @@ c & c & c
 
       <p>If one value was used three times to produce the output, it is responsible for the error at all three of those locations. Therefore, we sum the <strong>out_grad</strong> along the axes that were stretched.</p>
 
-      <p>Whenever we are <code>broadcasting</code>, Numpy is :</p>
+      <p>When broadcasting, NumPy does two things:</p>
       <ul>
-        <li><strong>Prepending</strong> : (3,) is broadcasted to (2,3) . It adds axes to the front.</li>
-        <li><strong>Stretching</strong> : If any dimension is 1 (3,1) it repeats till N to (3,10).</li>
+        <li><strong>Prepending:</strong> (3,) broadcast to (2, 3) adds axes to the front.</li>
+        <li><strong>Stretching:</strong> If any dimension is 1, like (3, 1), it repeats to match, e.g., (3, 10).</li>
       </ul>
 
-      <p><strong>Handling Prepending</strong>: If <code>out_grad</code> has more dimensions than the input that means <code>forward</code> pass added a new dimension to the front. <strong>The length of <code>out_grad</code> dimensions must be equal to length of input dimensions.</strong> That means we need to <strong>sum</strong> the <code>out_grad</code> continuously on (axis=0) until length of dimensions match.</p>
+      <p><strong>Handling Prepending:</strong> If <code>out_grad</code> has more dimensions than the input, the forward pass added dimensions to the front. Sum <code>out_grad</code> along axis 0 until the number of dimensions matches.</p>
 
-      <p><strong>Handling Stretching</strong>:<br>
-Now that your dimensions match (e.g., both are 2D), you might still have a shape mismatch. Your input was (3, 1) but your gradient is (3, 10).</p>
+      <p><strong>Handling Stretching:</strong> Once dimensions match (e.g., both are 2D), you might still have a shape mismatch. If the input was (3, 1) but the gradient is (3, 10):</p>
       <ul>
-        <li>If the original matrix dimension was 1 , but the out_grad dimension > 1 , then stretching happened in that axis.</li>
-        <li>Simply sum over that axis.</li>
-        <li>Be careful when we <strong>sum</strong>, sometimes it does (3,) instead of (3,1). You may want to insert 1 incase.</li>
+        <li>If the original dimension was 1 but <code>out_grad</code>'s dimension is greater than 1, stretching happened on that axis.</li>
+        <li>Sum over that axis.</li>
+        <li>Be careful: summing sometimes gives (3,) instead of (3, 1). You may need to insert a 1 to restore the shape.</li>
       </ul>
-
-      <p><strong>File</strong> : <strong>baby/ops.py</strong></p>
 
       <div class="hint">
         <strong>Exercise 3.7</strong>
-        <p>Lets write the <strong>BroadcastTo</strong> class.</p>
+        <p>Let's write the <code>BroadcastTo</code> class.</p>
 <pre><code class="language-python">
 class BroadcastTo(Function):
     def __init__(self, shape):
@@ -618,7 +611,7 @@ def broadcast_to(a, shape):
 
       <h3>3.4.5 Matmul</h3>
 
-      <p><code>Matmul</code> is important.</p>
+      <p>Matrix multiplication is one of the most important operations in deep learning.</p>
 
       <p>In the forward pass, we compute \(C = A \cdot B\). How do we distribute the gradient (\(out\_grad\)) back to \(A\) and \(B\)?</p>
       <ul>
@@ -651,11 +644,9 @@ def broadcast_to(a, shape):
 
       <p>$$\frac{\partial L}{\partial B} = A^T \cdot out\_grad$$</p>
 
-      <p><strong>File</strong> : <strong>baby/ops.py</strong></p>
-
       <div class="hint">
         <strong>Exercise 3.8</strong>
-        <p>Lets write the <strong>MatMul</strong> class.</p>
+        <p>Let's write the <code>MatMul</code> class.</p>
 <pre><code class="language-python">
 class MatMul(Function):
     def forward(self, a, b):
@@ -680,9 +671,9 @@ def matmul(a, b):
 <pre><code class="language-python">x = babygrad.autograd.Tensor([1,2,3])
 y =x+1 </code></pre>
 
-      <p>Here <code>x</code> is a Tensor type and <code>1</code> is a <code>Scalar</code> type. So currently there is no way we can do the forward pass and backward pass for these types of situations.</p>
+      <p>Here <code>x</code> is a Tensor and <code>1</code> is a scalar. We need a way to handle these mixed-type operations.</p>
 
-      <p>The <code>Scalar</code> operations are pretty simple and straightforward too. The gradient only flows to the tensor input; the <code>Scalar</code> is treated as a constant.</p>
+      <p>Scalar operations are straightforward. The gradient only flows to the tensor input; the scalar is treated as a constant.</p>
 
 <pre><code class="language-python">
 class AddScalar(Function):
@@ -700,12 +691,10 @@ def add_scalar(a, scalar):
     return AddScalar(scalar)(a)
 </code></pre>
 
-      <p>Yes! That's it.</p>
-
-      <p><strong>File</strong>: <strong>baby/ops.py</strong></p>
+      <p>That's it!</p>
 
       <div class="hint">
-        <strong>Exercise 3.8: Implement Forward and Backward Pass.</strong>
+        <strong>Exercise 3.9: Implement Forward and Backward Pass</strong>
         <p>Write the <code>forward</code> and <code>backward</code> method for all these classes:</p>
         <ul>
           <li>MulScalar</li>
@@ -716,11 +705,11 @@ def add_scalar(a, scalar):
 
       <h2>3.5 Implementing Backward Pass in the <code>Tensor</code> Class</h2>
 
-      <p>We've built a <code>Tensor</code> class that supports forward and backward operations. We have already created the bridge betweeen our forward operations and <code>Tensor</code> class. We just need to create the bridge for <code>backward</code> operations. Each forward function inside <code>ops</code> had its own method inside <code>Tensor</code> class do we do the same thing for <code>backward</code>?</p>
+      <p>We've built a <code>Tensor</code> class that supports forward and backward operations. We've already created the bridge between our forward operations and the <code>Tensor</code> class. Now we need to create the bridge for backward operations. Each forward function in <code>ops</code> had its own method in the <code>Tensor</code> class—do we do the same for backward?</p>
 
-      <p>You might be tempted to write a <code>backward_add()</code> or <code>backward_mul()</code> for every operation, but that is a maintenance nightmare.</p>
+      <p>You might be tempted to write a <code>backward_add()</code> or <code>backward_mul()</code> for every operation, but that would be a maintenance nightmare.</p>
 
-      <p>Do we really need multiple backward() methods? No. A single <code>backward()</code> method inside the Tensor class is sufficient.</p>
+      <p>Do we really need multiple <code>backward()</code> methods? No. A single <code>backward()</code> method in the Tensor class is sufficient.</p>
       <ul>
         <li>The Tensor: Tracks the "Family Tree" (who created this tensor?).</li>
         <li>The Function: Stores the "Local Rule" (how do I derive this specific operation?).</li>
@@ -735,7 +724,7 @@ all_nodes.grad = None
 output.grad = 1
 output.backward()</code></pre>
 
-      <p>Lets see how we will implement <code>backward()</code> method inside <code>Tensor</code>.</p>
+      <p>Let's see how to implement the <code>backward()</code> method in <code>Tensor</code>.</p>
 
       <p><strong>File</strong> : <strong>babygrad/tensor.py</strong></p>
 
@@ -759,63 +748,60 @@ class Tensor:
         for node in reversed(topo_order):
             #your code </code></pre>
 
-      <p>To implement this we need to :</p>
+      <p>To implement this, we need to:</p>
       <ul>
-        <li>Find all Nodes (Tensors) in the computation graph that contributed to the result.</li>
+        <li>Find all nodes (Tensors) in the computation graph that contributed to the result.</li>
         <li>Order them correctly so we don't calculate a parent's gradient until we've finished calculating all of its children's gradients.</li>
       </ul>
 
-      <p>Lets start simple. First we will find the <strong>Nodes in the computation graph</strong> Lets talk about <strong>Depth-first search</strong> to find all the nodes in the computation graph.</p>
+      <p>Let's start simple. First, we'll find all the nodes in the computation graph using <strong>depth-first search</strong>.</p>
 
-      <p><strong>Depth-first search</strong> is an algorithm that explores a graph by going as deep as possible before backtracking.</p>
+      <p>Depth-first search is an algorithm that explores a graph by going as deep as possible before backtracking.</p>
 
 <pre><code class="language-python">def dfs(node, order, visited):
-    if node is  visited:
-        return    ## backtracking
+    if node in visited:
+        return  # already processed
 
-    for every parent in node.inputs:
-        call dfs(parent, order, visited)
+    for parent in node._inputs:
+        dfs(parent, order, visited)
 
-    add node to visited
-    add node to order
+    visited.add(node)
+    order.append(node)
 </code></pre>
 
       <div class="note">
-        <p>When backpropagating, a node in the computation graph might receive gradient contributions from multiple paths.<br>
-That means a nodes <code>.grad</code> might temporarily be represented as a <strong>list of tensors</strong> meaning one from each path.</p>
+        <p>When backpropagating, a node in the computation graph might receive gradient contributions from multiple paths. That means a node's <code>.grad</code> might temporarily be a list of tensors—one from each path.</p>
         <p>Example:</p>
 <pre><code class="language-python">a.grad = [Tensor([1, 2, 3]), Tensor([3, 4, 5]), Tensor([4, 5, 6])]</code></pre>
-        <p>This is perfectly fine temporarily, but eventually we need a single tensor representing the total gradient for that node. We need to accumulate the <strong>gradients</strong>.</p>
+        <p>This is fine temporarily, but eventually we need a single tensor representing the total gradient. We need to accumulate the gradients.</p>
       </div>
 
-      <p>If you have read the <code>backward</code> code you might see <strong>grads = {}</strong>.</p>
+      <p>You might have noticed <code>grads = {}</code> in the backward code. Why do we use a dictionary?</p>
 
-      <p>Why do we use <strong>grads = {}</strong> ?</p>
+      <p>In our backward loop, when we're at a child node, we calculate gradients for its parents. But we don't store them in <code>parent.grad</code> immediately—those parents might receive more gradients from other children. The parents will be processed later in the loop, so we need somewhere to hold their gradients until then.</p>
 
-      <p>In our backward loop, we are at a child node and we calculate the gradients for its parents. We only calculated the gradients of parents, we are not yet storing them inside <code>parents.grad</code> because we are currently running for <code>child_node</code>. The <strong>parents</strong> might get more <strong>gradients</strong> from other children. The parents will be processed later in the loop. We need to store them somewhere. A place to hold the gradient for every tensor until it's their turn in the loop.</p>
-
-      <p>So the grads dictionary is our temporary storage.</p>
+      <p>The <code>grads</code> dictionary is our temporary storage:</p>
       <ul>
-        <li><strong>Key</strong>: The Tensor's unique ID (id(node)).</li>
-        <li><strong>Value</strong> : The accumulated gradient (so far).</li>
+        <li><strong>Key:</strong> The Tensor's unique ID (<code>id(node)</code>)</li>
+        <li><strong>Value:</strong> The accumulated gradient so far</li>
       </ul>
 
-      <p>So grads is just our ledger for the entire backward pass.</p>
+      <p>The <code>grads</code> dictionary is our ledger for the entire backward pass.</p>
 
-      <p>In the loop, when we are at a <code>child_node</code>, we use its gradient.</p>
+      <p>In the loop, when we're at a child node:</p>
       <ul>
-        <li>We grab the child's gradient from our grads dictionary.</li>
-        <li>We run the _op.backward(childs_grad, child_node) to find the parents' gradients.</li>
-        <li>We store those results back in the dictionary under each parent's id().</li>
+        <li>Grab the child's gradient from the <code>grads</code> dictionary.</li>
+        <li>Call <code>_op.backward(child_grad, child_node)</code> to compute the parents' gradients.</li>
+        <li>Store those results back in the dictionary under each parent's <code>id()</code>.</li>
       </ul>
 
-      <p>When the loop eventually reaches those parents, their gradients will already be waiting for them in the dictionary.</p>
+      <p>When the loop eventually reaches those parents, their gradients will already be waiting in the dictionary.</p>
 
       <hr>
 
       <div class="hint">
-        <strong>Exercise 3.3: Implement <code>backward</code> function.</strong>
-        <p>Write the <code>backward</code> method inside <code>Tensor</code> class.</p>
+        <strong>Exercise 3.10: Implement the <code>backward</code> method</strong>
+        <p>Write the <code>backward</code> method in the <code>Tensor</code> class.</p>
 <pre><code class="language-python"># imports
 class Tensor:
     #code

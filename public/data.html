@@ -115,9 +115,9 @@ dataset = MyDataset(transforms=[normalize, add_noise])</code></pre>
 
       <h2>6.2 MNIST Dataset</h2>
 
-      <p>Lets create our MNIST Dataset using the classes above.</p>
+      <p>Let's create our MNIST Dataset using the classes above.</p>
 
-      <p>The <code>images</code> on a given index return an array of size (784). We need to reshape it into (28,28,1).</p>
+      <p>The <code>images</code> on a given index returns an array of size (784). We need to reshape it into (28,28,1).</p>
 
       <p>The index can be :</p>
       <ul>
@@ -162,7 +162,7 @@ dataset = MyDataset(transforms=[normalize, add_noise])</code></pre>
 
       <p>The <code>Dataset</code> nicely gives us a single pair (x,y) of samples from the dataset when given an index.</p>
 
-      <p>But we need samples in batches and we also need to decide if we need them in order of their occurence in the dataset or randomly. Random samples are important for model efficiency.</p>
+      <p>But we need samples in batches, and we also need to decide if we need them in order of their occurrence in the dataset or randomly. Random samples are important for model efficiency.</p>
 
       <p>So We need a <code>Dataloader</code> that will give us batches of samples from the dataset.</p>
 

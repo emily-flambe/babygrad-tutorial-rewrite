@@ -31,12 +31,12 @@
     <main class="content">
       <h1>Chapter 5: Optimizer</h1>
 
-      <p>We know how to create Model, we know how to find the Model's loss, we know how to calculate gradients, but we don't know how to actually update the <code>parameters</code> of the model using the gradients. It doesn't matter how many parameters our model has if we don't update its weights it is just a random number generator.</p>
+      <p>We know how to create a Model, we know how to find the Model's loss, we know how to calculate gradients, but we don't know how to actually update the <code>parameters</code> of the model using the gradients. It doesn't matter how many parameters our model has—if we don't update its weights, it is just a random number generator.</p>
 
       <p>We will build SGD and Adam.</p>
 
       <div class="note">
-        <p>This is how our <strong>folder structure</strong> currently looks like. In this chapter we will work inside <strong>babygrad/optim.py</strong>.</p>
+        <p>This is how our <strong>folder structure</strong> currently looks. In this chapter we will work inside <strong>babygrad/optim.py</strong>.</p>
         <pre><code>project/
 ├─ .venv/                # virtual environment
 ├─ babygrad/             # source code
@@ -67,7 +67,7 @@ for p in model.parameters():
 
       <p>What are we changing? We are changing the <strong>weights</strong> of the model using <strong>grad</strong> calculated by <strong>loss.backward()</strong>.</p>
 
-      <p>So the only thing is finding the best weights for our model for good outputs.</p>
+      <p>So the only thing left is finding the best weights for our model to produce good outputs.</p>
 
       <pre><code>for p in model.parameters():
     p.data = p.data - lr * p.grad</code></pre>
@@ -76,9 +76,9 @@ for p in model.parameters():
 
       <p>Changing weights like this is good but we can use different methods for changing the weights nicely.</p>
 
-      <p>Instead of writing the <strong>weight update loop</strong> always, we will use <code>Optimizer</code>. Lets first define a Base <code>Optimizer</code> class.</p>
+      <p>Instead of writing the <strong>weight update loop</strong> every time, we will use an <code>Optimizer</code>. Let's first define a base <code>Optimizer</code> class.</p>
 
-      <p>Before writing it, lets question ourselves. What should the base class contain?</p>
+      <p>Before writing it, let's question ourselves: what should the base class contain?</p>
 
       <ul>
         <li>Initialization of parameters.</li>
@@ -91,7 +91,7 @@ for p in model.parameters():
 
       <p>Should we keep the old gradients for a fresh training loop?</p>
 
-      <p>Not really. The old gradients were specific to the old weights. Once the weight update is done, they have served their purpose. If we don't clear them, they will accumulate with the new gradients, confusing our model. So we</p>
+      <p>Not really. The old gradients were specific to the old weights. Once the weight update is done, they have served their purpose. If we don't clear them, they will accumulate with the new gradients, confusing our model. So we:</p>
 
       <ul>
         <li>Zero the gradients at the start of every iteration.</li>
@@ -144,11 +144,11 @@ for p in model.parameters():
 
       <div class="exercise">
         <h3>Exercise 5.1</h3>
-        <p>Lets write the <strong>SGD</strong> class.</p>
+        <p>Let's write the <strong>SGD</strong> class.</p>
         <pre><code>class SGD(Optimizer):
     """
     This optimizer updates parameters by taking a step in the direction
-     of the negative gradient, multipled by the learning rate.
+     of the negative gradient, multiplied by the learning rate.
     """
     def __init__(self, params, lr=0.01):
 
@@ -161,7 +161,7 @@ for p in model.parameters():
         """
 
         # Note: The update is performed on the .data attribute
-        # Dont want `step` to be a part of computation graph.
+        # Don't want `step` to be a part of computation graph.
         #check if param.grad is None or not.</code></pre>
 
         <div class="note">
@@ -188,15 +188,15 @@ optimizer.step()</code></pre>
 
       <p>So we will look at the <strong>history of gradients</strong>.</p>
 
-      <p><strong>If a parameter's gradient has been consistently large, Maybe we should be careful and take smaller steps.</strong></p>
+      <p><strong>If a parameter's gradient has been consistently large, maybe we should be careful and take smaller steps.</strong></p>
 
-      <p><strong>If a parameter's gradient has been small and stable, Maybe we can be bold and take larger steps.</strong></p>
+      <p><strong>If a parameter's gradient has been small and stable, maybe we can be bold and take larger steps.</strong></p>
 
       <p>So we need to track two things:</p>
 
       <ul>
         <li>Where are we going?</li>
-        <li>How confident we are? (How steady is the path)?</li>
+        <li>How confident are we? (How steady is the path?)</li>
       </ul>
 
       <p>This is exactly what <strong>Adam</strong> does!</p>
@@ -222,7 +222,7 @@ optimizer.step()</code></pre>
 
       <ul>
         <li><strong>beta1</strong> (usually 0.9): How much we care about the recent direction.</li>
-        <li><strong>beta2</strong> (usually 0.999): How much we care about magnitude</li>
+        <li><strong>beta2</strong> (usually 0.999): How much we care about magnitude.</li>
       </ul>
 
       <p>Let's build it!</p>
@@ -231,7 +231,7 @@ optimizer.step()</code></pre>
 
       <div class="exercise">
         <h3>Exercise 5.2</h3>
-        <p>Lets write the <strong>Adam</strong> class.</p>
+        <p>Let's write the <strong>Adam</strong> class.</p>
         <pre><code>class Adam(Optimizer):
     """
     Implements the Adam optimization algorithm.

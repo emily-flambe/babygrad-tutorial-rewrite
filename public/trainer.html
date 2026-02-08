@@ -47,7 +47,7 @@ for epoch in range(10):
       <p>This works fine, but it becomes repetitive. Every model and every experiment requires writing the same boilerplate. To make our workflow cleaner, we can wrap this logic inside a <strong>Trainer</strong> class.</p>
 
       <div class="note">
-        <p><strong>Note:</strong> This is how our <strong>folder structure</strong> currently looks like. In this chapter we will work inside <strong>babygrad/trainer.py</strong>.</p>
+        <p><strong>Note:</strong> This is what our <strong>folder structure</strong> currently looks like. In this chapter, we will work inside <strong>babygrad/trainer.py</strong>.</p>
         <pre><code>project/
 ├─ .venv/
 ├─ babygrad/
@@ -82,7 +82,7 @@ trainer.fit(EPOCHS)</code></pre>
 
       <div class="exercise">
         <h3>Exercise 9.1</h3>
-        <p>Lets write the <strong>fit</strong> method inside <strong>Trainer</strong> class.</p>
+        <p>Let's write the <strong>fit</strong> method inside the <strong>Trainer</strong> class.</p>
         <pre><code>from babygrad.tensor import Tensor
 
 class Trainer:
@@ -125,7 +125,7 @@ class Trainer:
         # 1. Set model to evaluation mode: self.model.eval()
         # 2. Loop over self.val_loader
         # 3. Forward pass only (no backward)
-        # 4. Compare predictions to true labels(use argmax(axis=1))
+        # 4. Compare predictions to true labels (use argmax(axis=1))
         # 5. Sum the correct predictions and calculate the average.
         pass
 </code></pre>

@@ -33,7 +33,7 @@
     <main class="content">
       <h1>Chapter 4: nn</h1>
 
-      <p>If we want to build a Neural Network we don't want to define each weight manually. In this chapter We will start creating the <code>nn.Module</code> class for various layers.</p>
+      <p>If we want to build a Neural Network, we don't want to define each weight manually. In this chapter we will start creating the <code>nn.Module</code> class for various layers.</p>
 
       <div class="hint">
         <strong>Note</strong>
@@ -60,7 +60,7 @@
 
       <p>This means we need an explicit way to mark a tensor as learnable. We do this by wrapping it in the <code>Parameter</code> class, which automatically sets <strong>requires_grad=True</strong></p>
 
-      <p>Why a seperate class? just for something simple?</p>
+      <p>Why a separate class? Just for something simple?</p>
 
       <ul>
         <li>It makes the code self-documenting. When you see self.weight = Parameter(...) inside a layer, you know immediately that it is a learnable weight, not just a temporary tensor.</li>
@@ -93,9 +93,9 @@ b = Parameter(a)
 print(b.requires_grad)
 >>>True </code></pre>
 
-      <p>As you can see <code>Parameter</code> class only does this one thing. It makes a parameter a learnable parameter.</p>
+      <p>As you can see, the <code>Parameter</code> class only does this one thing. It makes a parameter a learnable parameter.</p>
 
-      <p>Lets also write a simple method to get all the parameters . Now that we have a way to mark parameters, we need a way to find them. A model can store parameters in several structures</p>
+      <p>Let's also write a simple method to get all the parameters. Now that we have a way to mark parameters, we need a way to find them. A model can store parameters in several structures:</p>
 
       <ul>
         <li>Directly as attributes <strong>(self.weight)</strong></li>
@@ -221,7 +221,7 @@ class Module:
 
       <p>To handle this, our Module class will need to keep track of its current state. We will add a <strong>self.training</strong> attribute and two methods, <strong>train() and eval()</strong>, to switch between these states.</p>
 
-      <p>First lets use a method to find all the <code>Modules</code> present.</p>
+      <p>First let's use a method to find all the <code>Modules</code> present.</p>
 
 <pre><code>def _get_modules(obj) -> list['Module']:
     """
@@ -255,9 +255,9 @@ class Module:
         for m in _get_modules(self.__dict__):
             m.training = False </code></pre>
 
-      <p>We have also defined a <code>_get_modules</code> which is same as <code>_get_parameters</code>. We can now just call <strong>model.eval()</strong> or <strong>model.train()</strong> to chain states.</p>
+      <p>We have also defined a <code>_get_modules</code> which is the same as <code>_get_parameters</code>. We can now just call <strong>model.eval()</strong> or <strong>model.train()</strong> to change states.</p>
 
-      <p>Lets start building layers using <code>Module</code>.</p>
+      <p>Let's start building layers using <code>Module</code>.</p>
 
       <h3>4.2.1 ReLU</h3>
 
@@ -273,7 +273,7 @@ class Module:
 
       <div class="exercise">
         <strong>Exercise 4.1</strong>
-        <p>Lets write the <strong>ReLu</strong> class.</p>
+        <p>Let's write the <strong>ReLU</strong> class.</p>
 <pre><code>class ReLU(Module):
     def forward(self, x: Tensor):
         """
@@ -309,7 +309,7 @@ class Sigmoid(Module):
 
       <div class="exercise">
         <strong>Exercise 4.2</strong>
-        <p>Lets write the <strong>Flatten</strong> class.</p>
+        <p>Let's write the <strong>Flatten</strong> class.</p>
 <pre><code>class Flatten(Module):
     """
     Flattens a tensor by reshaping it to `(batch_size, -1)`.
@@ -331,13 +331,13 @@ class Sigmoid(Module):
         </div>
       </div>
 
-      <p>Till now in the exercises we didn't have a need to use <code>Parameter</code> to initialize anything.</p>
+      <p>So far in the exercises, we didn't have a need to use <code>Parameter</code> to initialize anything.</p>
 
       <h3>4.2.3 Linear</h3>
 
-      <p>So far, the layers we've built: <code>ReLU</code>, <code>Flatten</code>, <code>Sigmoid</code> have all been stateless. They perform a fixed mathematical operation but don't have any memory or learnable parts.</p>
+      <p>So far, the layers we've built (<code>ReLU</code>, <code>Flatten</code>, <code>Sigmoid</code>) have all been stateless. They perform a fixed mathematical operation but don't have any memory or learnable parts.</p>
 
-      <p>The most simplest layer is the <code>Linear</code> layer. It multiplies the <strong>input</strong> with <code>weight</code> and adds <code>bias</code>. The Linear layer (also called a "Dense" or "Fully Connected" layer) maintains state in the form of <code>weight</code> and <code>bias</code>. These are the learnable parameters that the model "adjusts" during training to get the right answer.</p>
+      <p>The simplest layer is the <code>Linear</code> layer. It multiplies the <strong>input</strong> with <code>weight</code> and adds <code>bias</code>. The Linear layer (also called a "Dense" or "Fully Connected" layer) maintains state in the form of <code>weight</code> and <code>bias</code>. These are the learnable parameters that the model "adjusts" during training to get the right answer.</p>
 
       <p>\[
     output = x @ Weight + bias
@@ -351,7 +351,7 @@ class Sigmoid(Module):
 
       <div class="exercise">
         <strong>Exercise 4.3</strong>
-        <p>Lets write the <strong>Linear</strong> class.</p>
+        <p>Let's write the <strong>Linear</strong> class.</p>
 <pre><code>class Linear(Module):
     """
     Applies a linear transformation to the incoming data: y = xA^T + b.
@@ -394,7 +394,7 @@ class Sigmoid(Module):
 
       <h3>4.2.4 Sequential</h3>
 
-      <p>If you have a model with many different layers like :</p>
+      <p>If you have a model with many different layers like:</p>
 
 <pre><code>class MygoodNetwork(Module):
     def __init__(self):
@@ -415,7 +415,7 @@ class Sigmoid(Module):
 
       <div class="exercise">
         <strong>Exercise 4.4</strong>
-        <p>Lets write the <strong>Sequential</strong> class.</p>
+        <p>Let's write the <strong>Sequential</strong> class.</p>
 <pre><code>class Sequential(Module):
     A container that chains a sequence of modules together.
     Example:
@@ -441,7 +441,7 @@ class Sigmoid(Module):
 
       <p>We've seen that <code>Sequential</code> is great for stacking layers. But as we stack more and more layers, the network can start to "forget" the original input. The <strong>input</strong> has to pass through so many layers that it can get lost.</p>
 
-      <p>What if we don't always have to pass our input through our network? What if we could skip some layers? Instead of forcing the input \(x\) to be transformed by every single layer, can we create a way? to let the input bypass the layers and add itself back to the result at the end.</p>
+      <p>What if we don't always have to pass our input through our network? What if we could skip some layers? Instead of forcing the input \(x\) to be transformed by every single layer, can we create a way to let the input bypass the layers and add itself back to the result at the end?</p>
 
       <p>\[output = f(x) + x\]</p>
 
@@ -478,21 +478,21 @@ class Sigmoid(Module):
 
       <p>That means the network is dependent on very few specific nodes for the output and the other nodes are not being used at their level.</p>
 
-      <p>In a quiz competition, if all team members are dependent on alice for correct answers, the team members will have no role to play at all.</p>
+      <p>In a quiz competition, if all team members are dependent on Alice for correct answers, the team members will have no role to play at all.</p>
 
       <p>So what shall we do?</p>
 
-      <p>Remove alice or remove everyone else?</p>
+      <p>Remove Alice or remove everyone else?</p>
 
-      <p>Sometimes alice sit out , sometimes the some other person sits out. So that everyone starts performing instead of depending on others.</p>
+      <p>Sometimes Alice sits out, sometimes some other person sits out. That way everyone starts performing instead of depending on others.</p>
 
-      <p>To prevent this, we use Dropout. We force Alice (and everyone else) to "sit out" at random during training. This forces every one to learn useful features on its own. This is what <code>Dropout</code> does.</p>
+      <p>To prevent this, we use Dropout. We force Alice (and everyone else) to "sit out" at random during training. This forces everyone to learn useful features on its own. This is what <code>Dropout</code> does.</p>
 
       <p><strong>During training, some neurons are temporarily turned off at random. And during testing everyone participates.</strong></p>
 
       <div class="exercise">
         <strong>Exercise 4.5</strong>
-        <p>Lets write the <strong>Dropout</strong> class.</p>
+        <p>Let's write the <strong>Dropout</strong> class.</p>
 <pre><code>class Dropout(Module):
     """
     A regularization layer to help prevent overfitting.
@@ -552,15 +552,15 @@ class Sigmoid(Module):
         <p>The change in the distribution of a layer's inputs during training.</p>
       </div>
 
-      <p>In deep networks which consists of many layers, <strong>it is important for input distribution to stay stable.</strong></p>
+      <p>In deep networks which consist of many layers, <strong>it is important for input distribution to stay stable.</strong></p>
 
-      <p>Why?** Why should the input distribution stay stable?**</p>
+      <p>Why? Why should the input distribution stay stable?</p>
 
-      <p>If it is not stable, which means learning process for each layer becomes harder.</p>
+      <p>If it is not stable, the learning process for each layer becomes harder.</p>
 
-      <p>Why does it becomes harder? Because each layer is trying to learn from unstable inputs.</p>
+      <p>Why does it become harder? Because each layer is trying to learn from unstable inputs.</p>
 
-      <p>So what can we do ? We need to stablize these inputs. Thats what we will do in <code>LayerNorm</code>.</p>
+      <p>So what can we do? We need to stabilize these inputs. That's what we will do in <code>LayerNorm</code>.</p>
 
       <p>\[
 \text{normalized activation}_i = \frac{\text{activation}_i - \text{mean of activations}}{\text{standard deviation of activations} + \epsilon}
@@ -585,7 +585,7 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}(x)}{\text{std}(x) + \epsilon}
 
       <div class="exercise">
         <strong>Exercise 4.6</strong>
-        <p>Lets write the <strong>LayerNorm1d</strong> class.</p>
+        <p>Let's write the <strong>LayerNorm1d</strong> class.</p>
 <pre><code>class LayerNorm1d(Module):
     def __init__(self,dim: int, eps: float=1e-5,device=None,
                  dtype="float32"):
@@ -607,7 +607,7 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}(x)}{\text{std}(x) + \epsilon}
 
       <h3>4.2.8 BatchNorm</h3>
 
-      <p>LayerNorm works on the features axis whereas <code>BatchNorm</code> works on batches(axis=0). It transforms the data so that input has a mean of 0 and a standard deviation of 1 over the <strong>batch</strong> dimension.</p>
+      <p>LayerNorm works on the features axis whereas <code>BatchNorm</code> works on batches (axis=0). It transforms the data so that the input has a mean of 0 and a standard deviation of 1 over the <strong>batch</strong> dimension.</p>
 
       <div class="hint">
         <strong>Tip</strong>
@@ -640,13 +640,13 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
 
       <p>\[\text{running\_var} = (1 - \text{momentum}) \times \text{running\_var} + \text{momentum} \times \text{batch\_var}\]</p>
 
-      <p>But during <strong>training=False</strong> we do not calculate new <code>running_mean</code> and <code>running_var</code> but use the buffers that we created during the training phase .</p>
+      <p>But during <strong>training=False</strong> we do not calculate new <code>running_mean</code> and <code>running_var</code> but use the buffers that we created during the training phase.</p>
 
       <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
 
       <div class="exercise">
         <strong>Exercise 4.7</strong>
-        <p>Lets write the <strong>BatchNorm</strong> class.</p>
+        <p>Let's write the <strong>BatchNorm</strong> class.</p>
 <pre><code>class BatchNorm1d(Module):
     def __init__(self, dim: int, eps: float = 1e-5, momentum: float = 0.1,
              device: Any | None = None, dtype: str = "float32") -> None:
@@ -679,7 +679,7 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
 
       <h3>4.2.9 MSE Loss</h3>
 
-      <p>It is a Standard loss function for Regression tasks. It calculates the average of the squared differences between the predicted values and the actual targets.</p>
+      <p>It is a standard loss function for regression tasks. It calculates the average of the squared differences between the predicted values and the actual targets.</p>
 
       <p>\[\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (y_{\text{pred}_i} - y_{\text{target}_i})^2\]</p>
 
@@ -694,40 +694,40 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
 
       <h3>4.2.10 SoftmaxLoss</h3>
 
-      <p>Lets take a single image and the image could be [Cat,Dog,Elephant]. Our image is a <strong>Dog</strong>. We take this image and give it to our model. And the model gives us the output scores:</p>
+      <p>Let's take a single image. The image could be a Cat, Dog, or Elephant. Our image is a <strong>Dog</strong>. We take this image and give it to our model, and the model gives us the output scores:</p>
 
       <p>\[logits = [2.0, 5.0, 1.0]\]</p>
 
-      <p>Model is sure it is a <strong>Dog</strong>.</p>
+      <p>The model is sure it is a <strong>Dog</strong>.</p>
 
-      <p>Lets turn our <code>true</code> label(Dog) into a <code>one_hot</code> vector.</p>
+      <p>Let's turn our <code>true</code> label (Dog) into a <code>one_hot</code> vector.</p>
 
       <p>\[y\_one\_hot = [0, 1, 0]\]</p>
 
-      <p>Lets multiply the <strong>logits</strong> with <strong>one_hot</strong></p>
+      <p>Let's multiply the <strong>logits</strong> with <strong>one_hot</strong>:</p>
 
       <p>\[[2.0, 5.0, 1.0] \times [0, 1, 0] = [0, 5.0, 0]\]</p>
 
       <p>\[\text{sum}([0, 5.0, 0]) = \mathbf{5.0}\]</p>
 
-      <p>Lets do <code>logsumexp</code> for the for the logits.</p>
+      <p>Let's do <code>logsumexp</code> for the logits.</p>
 
       <p>\[\text{logsumexp}([2.0, 5.0, 1.0]) = \ln(e^{2.0} + e^{5.0} + e^{1.0})\]</p>
 
-      <p>We get nearly = 5.066</p>
+      <p>We get nearly 5.066.</p>
 
-      <p>Now lets find the loss:</p>
+      <p>Now let's find the loss:</p>
 
       <p>\[\text{Loss} = logsumexp - h_y\]
 \[\text{Loss} = 5.066 - 5.0 = \mathbf{0.066}\]</p>
 
-      <p>The loss is less, that means the model correctly predicted our image.</p>
+      <p>The loss is low, which means the model correctly predicted our image.</p>
 
-      <p><strong>We will use the <code>max</code> trick , so that the exponents don't explode.</strong></p>
+      <p><strong>We will use the <code>max</code> trick, so that the exponents don't explode.</strong></p>
 
       <p>\[\text{LogSumExp}(x) = \max(x) + \ln \left( \sum_{i} e^{x_i - \max(x)} \right)\]</p>
 
-      <p>Lets figure out how to do <strong>backward</strong> pass for this.</p>
+      <p>Let's figure out how to do the <strong>backward</strong> pass for this.</p>
 
       <p>Using the chain rule on \(f(x) = \ln(\sum e^{x_i})\), the derivative with respect to \(x_i\) is:</p>
 
@@ -739,7 +739,7 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
 
       <div class="exercise">
         <strong>Exercise 4.8</strong>
-        <p>Lets write the <strong>SoftmaxLoss</strong> class.</p>
+        <p>Let's write the <strong>SoftmaxLoss</strong> class.</p>
 <pre><code>class SoftmaxLoss(Module):
     def forward(self, logits, y):
         """

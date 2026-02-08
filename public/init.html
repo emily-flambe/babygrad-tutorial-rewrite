@@ -32,7 +32,7 @@
       <h1>Chapter 7: Initialization</h1>
 
       <div class="note">
-        <p>This is how our <strong>folder structure</strong> currently looks like. In this chapter we will work inside <strong>babygrad/init.py</strong>.</p>
+        <p>This is how our <strong>folder structure</strong> currently looks. In this chapter, we will work inside <strong>babygrad/init.py</strong>.</p>
         <pre><code>project/
 ├─ .venv/
 ├─ babygrad/
@@ -47,7 +47,7 @@
 └─ tests/</code></pre>
       </div>
 
-      <p>Up until now, before starting training, we've been randomly initializing our weights. This seems perfectly reasonable after all, we know that by the end of the training process, gradient descent will find the optimal weights we need.</p>
+      <p>Up until now, before starting training, we've been randomly initializing our weights. This seems perfectly reasonable. After all, we know that by the end of the training process, gradient descent will find the optimal weights we need.</p>
 
       <p>So why should we even care about how we initialize the weights? Won't training just fix any poor initial choices anyway?</p>
 
@@ -56,7 +56,7 @@
       <p>If we don't take into consideration the seriousness of good initialization, we are almost certain to face one of these three crippling problems:</p>
 
       <ul>
-        <li><p><strong>The Symmetry Problem (Similar Weights)</strong>: If all weights start with the same value, every neuron in a layer learns the exact same feature. It's like having a team where every member is a perfect clone doing the same job completely defeating the purpose of having a team in the first place.</p></li>
+        <li><p><strong>The Symmetry Problem (Similar Weights)</strong>: If all weights start with the same value, every neuron in a layer learns the exact same feature. It's like having a team where every member is a perfect clone doing the same job, completely defeating the purpose of having a team in the first place.</p></li>
         <li><p><strong>The Vanishing Gradient Problem (Smaller Weights)</strong>: When weights are consistently too small, the signal (and its gradient) shrinks as it passes through each layer. By the time it reaches the early layers, it's so faint that they receive no meaningful updates. The model simply refuses to learn anything.</p></li>
         <li><p><strong>The Exploding Gradient Problem (Bigger Weights)</strong>: The opposite occurs when weights are too large. The signal grows exponentially with each layer until it becomes massive. This results in huge, unstable updates during training that cause the loss to fly towards infinity, often seen as <strong>NaN</strong> values in your output.</p></li>
       </ul>
@@ -75,7 +75,7 @@ constant probability of being chosen.</code></pre>
 
       <p>So what shall we do?</p>
 
-      <p>We need to choose initializations that are healthy and not too big or too small.</p>
+      <p>We need to choose initializations that are healthy: not too big or too small.</p>
 
       <p>But how?</p>
 
@@ -112,7 +112,7 @@ constant probability of being chosen.</code></pre>
 
       <h3>7.1.2 Xavier Normal</h3>
 
-      <p>For a normal distribution, the goal is the same, but instead of defining a hard limit, we define the standard deviation (std) of the distribution</p>
+      <p>For a normal distribution, the goal is the same, but instead of defining a hard limit, we define the standard deviation (std) of the distribution.</p>
 
       <p>W ~ N(0, 2 / (fan_in + fan_out))</p>
 
@@ -131,7 +131,7 @@ constant probability of being chosen.</code></pre>
 
       <h2>7.2 Kaiming</h2>
 
-      <p>While Xavier initialization works well for <strong>tanh</strong> and <strong>sigmoid</strong> activations, a different approach is needed for ReLU activation function. Kaiming initialization adjusts the formulas to account for the properties of ReLU.</p>
+      <p>While Xavier initialization works well for <strong>tanh</strong> and <strong>sigmoid</strong> activations, a different approach is needed for the ReLU activation function. Kaiming initialization adjusts the formulas to account for the properties of ReLU.</p>
 
       <h3>7.2.1 Kaiming Uniform</h3>
 

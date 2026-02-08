@@ -31,14 +31,14 @@
     <main class="content">
       <h1>Chapter 8: Model Persistence</h1>
 
-      <p>After training your model you turn off your computer and go to sleep or take a walk. When you turn your computer on again to find your model, It doesn't exist.</p>
+      <p>After training your model, you turn off your computer and go to sleep or take a walk. When you turn your computer on again to find your model, it doesn't exist.</p>
 
-      <p>So We need to store our model state. When storing our model should we store entire details of the model? Or the necessary ones? How can we know what is important and what is not ?</p>
+      <p>So we need to store our model state. When storing our model, should we store the entire details of the model? Or just the necessary ones? How can we know what is important and what is not?</p>
 
-      <p>When loading our model we expect to load the exact state of the model that we trained. This implies that we already have the code and architecture. So What should we save then? What is changing in a model? The <code>parameters</code> change.<br>
+      <p>When loading our model, we expect to load the exact state of the model that we trained. This implies that we already have the code and architecture. So what should we save then? What is changing in a model? The <code>parameters</code> change.<br>
       So only the <code>parameters</code> must be stored.</p>
 
-      <p>So we need a way to :</p>
+      <p>So we need a way to:</p>
       <ul>
         <li>Store the state of the model.</li>
         <li>Load the state of the model.</li>
@@ -68,10 +68,10 @@
   'layer1.bias': ([0.01, 0.04, ...]),
 }</code></pre>
 
-      <p>Inside a Model We find different type of objects.</p>
+      <p>Inside a Model, we find different types of objects.</p>
       <ul>
         <li>Tensor/Parameter objects.</li>
-        <li>Linear/Module objects.(Inside them we find Tensor/Parameter objects).</li>
+        <li>Linear/Module objects. (Inside them we find Tensor/Parameter objects.)</li>
         <li>Sequential/List/Tuple objects.</li>
       </ul>
 
@@ -80,17 +80,17 @@ model = Sequential(Linear(10, 20), ReLU(), Linear(20, 1))
 # ... train ...
 model.save("my_model.pkl")</code></pre>
 
-      <p>As mentioned above, we need to handle these 3 cases (Tensor, Module, List) and then return a dictionary object. Which consists of:</p>
+      <p>As mentioned above, we need to handle these 3 cases (Tensor, Module, List) and then return a dictionary object, which consists of:</p>
       <ul>
         <li><strong>Key</strong>: A string representing the flattened path to the parameter (e.g., "<code>layer1.weight</code>" or "<code>layers.0.bias</code>"). We use dot notation to join the names as we go deeper into the recursion.</li>
-        <li><strong>Value</strong>: The raw numpy array(accessed via .data). We don't want to store <code>Tensor</code> object(which has graph details) but <code>Tensor.data</code></li>
+        <li><strong>Value</strong>: The raw numpy array (accessed via .data). We don't want to store the <code>Tensor</code> object (which has graph details) but <code>Tensor.data</code>.</li>
       </ul>
 
-      <p><strong>File</strong> : <strong>babygrad/nn.py</strong></p>
+      <p><strong>File</strong>: <strong>babygrad/nn.py</strong></p>
 
       <div class="exercise">
         <h3>Exercise 8.1</h3>
-        <p>Lets write the <strong>state_dict</strong> inside <strong>Module</strong> class.</p>
+        <p>Let's write the <strong>state_dict</strong> inside the <strong>Module</strong> class.</p>
 <pre><code>import pickle
 class Module:
 
@@ -115,31 +115,31 @@ class Module:
             pickle.dump(self.state_dict(), f)</code></pre>
 
         <div class="hint">
-          <p>Don't store the <code>Tensor</code> object just store <code>tensor.data</code>.</p>
-          <p>Can you use recursion here? If you find a <strong>Module</strong> , you should call <strong>state_dict()</strong> on it! .</p>
+          <p>Don't store the <code>Tensor</code> object; just store <code>tensor.data</code>.</p>
+          <p>Can you use recursion here? If you find a <strong>Module</strong>, you should call <strong>state_dict()</strong> on it!</p>
         </div>
       </div>
 
       <h2>8.2 Load Model</h2>
 
-      <p>We need to load the saved model. We can't blindly copy from the dictionary of the saved model. The empty model architecture must have the same shape as the saved model architecture or else loading will not be possible.</p>
+      <p>We need to load the saved model. We can't blindly copy from the dictionary of the saved model. The empty model architecture must have the same shape as the saved model architecture, or else loading will not be possible.</p>
 
       <p>*<strong>Architecture should match</strong>.</p>
 
-      <p>If you are loading your model state on a different architecture it won't work. Th</p>
+      <p>If you are loading your model state on a different architecture, it won't work.</p>
 
       <ul>
-        <li>For <strong>Tensor/Parameter</strong> we can directly call value.data = state_dict[key].</li>
-        <li>For <strong>Module</strong> we have to understand that we <strong>saved the keys as key.childkey</strong> inside <code>state_dict</code> But the <strong><code>Module</code> doesn't care or want to know that</strong>. It only cares and has state_dict[childkey]=value.data</li>
+        <li>For <strong>Tensor/Parameter</strong>, we can directly call value.data = state_dict[key].</li>
+        <li>For <strong>Module</strong>, we have to understand that we <strong>saved the keys as key.childkey</strong> inside <code>state_dict</code>. But the <strong><code>Module</code> doesn't care or want to know that</strong>. It only cares about and has state_dict[childkey]=value.data.</li>
       </ul>
 
-      <p>So We would first like to filter our <strong><code>state_dict</code> and remove the prefix key</strong> and then call the recursion on the <strong>new_state_dict</strong>.</p>
+      <p>So we would first like to filter our <strong><code>state_dict</code> and remove the prefix key</strong> and then call the recursion on the <strong>new_state_dict</strong>.</p>
 
-      <p><strong>File</strong> : <strong>babygrad/nn.py</strong></p>
+      <p><strong>File</strong>: <strong>babygrad/nn.py</strong></p>
 
       <div class="exercise">
         <h3>Exercise 8.2</h3>
-        <p>Lets write the <strong>load_state_dict</strong> inside <strong>Module</strong> class.</p>
+        <p>Let's write the <strong>load_state_dict</strong> inside the <strong>Module</strong> class.</p>
 <pre><code>import pickle
 class Module:
     def load_state_dict(self, state_dict)-> None:
@@ -173,8 +173,8 @@ class Module:
 
         <div class="hint">
           <p>Can you use recursion here?</p>
-          <p>Just like saving, if you find a <strong>Module</strong> inside your class, you must recurse! Call <code>value.load_state_dict(child_state_dict)</code> to pass the data down</p>
-          <p>Do not replace the <code>Tensor</code> object itself! Just update the numbers inside it (value.data = state_dict[key])</p>
+          <p>Just like saving, if you find a <strong>Module</strong> inside your class, you must recurse! Call <code>value.load_state_dict(child_state_dict)</code> to pass the data down.</p>
+          <p>Do not replace the <code>Tensor</code> object itself! Just update the numbers inside it (value.data = state_dict[key]).</p>
         </div>
       </div>
 
