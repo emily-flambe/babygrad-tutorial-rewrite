@@ -5,5 +5,13 @@ package-lock.json
 # Wrangler
 .wrangler/
 
+# Playwright
+.playwright-mcp/
+*.screenshot.png
+
+# Screenshots from visual verification
+*.png
+!public/*.png
+
 # OS
 .DS_Store
