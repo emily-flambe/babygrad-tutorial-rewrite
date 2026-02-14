@@ -184,28 +184,34 @@ def mul(a, b):
       <p>Not too hard, right? We just completed the forward pass of <code>Add()</code>.</p>
 
       <div class="hint">
-        <strong>Exercise 3.1</strong>
-        <p>Write the <code>forward</code> method for all these classes:</p>
+        <strong>Exercise 3.2: Write the <code>forward</code> method for these operations.</strong>
+        <p>Each one follows the same pattern as <code>Add</code> and <code>Mul</code> above: take numpy arrays in, return a numpy array out. Use the corresponding numpy function.</p>
+
+        <p><strong>Arithmetic</strong> (two inputs, like Add and Mul):</p>
         <ul>
-          <li>Sub</li>
-          <li>Div</li>
-          <li>Pow</li>
-          <li>Transpose</li>
-          <li>Reshape</li>
-          <li>BroadcastTo</li>
-          <li>Summation</li>
-          <li>MatMul</li>
-          <li>Negate</li>
-          <li>Log</li>
-          <li>Exp</li>
-          <li>Relu</li>
-          <li>Sigmoid</li>
-          <li>Tanh</li>
-          <li>Sqrt</li>
-          <li>abs</li>
+          <li><code>Sub</code> — subtraction: <code>a - b</code></li>
+          <li><code>Div</code> — division: <code>a / b</code></li>
+          <li><code>Pow</code> — exponentiation: <code>np.power(a, b)</code></li>
         </ul>
+
+        <p><strong>Unary math</strong> (one input):</p>
+        <ul>
+          <li><code>Negate</code> — flip the sign: <code>-a</code></li>
+          <li><code>Log</code> — natural logarithm: <code>np.log(a)</code></li>
+          <li><code>Exp</code> — exponential: <code>np.exp(a)</code></li>
+          <li><code>Sqrt</code> — square root: <code>np.sqrt(a)</code></li>
+          <li><code>Abs</code> — absolute value: <code>np.abs(a)</code></li>
+        </ul>
+
+        <p><strong>Activation functions</strong> (one input — these are what make neural networks nonlinear; without them, stacking layers would be no better than a single layer):</p>
+        <ul>
+          <li><code>ReLU</code> — "Rectified Linear Unit": returns <code>x</code> if positive, <code>0</code> otherwise. Formula: <code>max(0, x)</code>. Hint: <code>a * (a &gt; 0)</code></li>
+          <li><code>Sigmoid</code> — squashes any value into the range (0, 1). Formula: <code>1 / (1 + e^(-x))</code></li>
+          <li><code>Tanh</code> — squashes any value into the range (-1, 1). Use <code>np.tanh(a)</code></li>
+        </ul>
+
         <div class="note">
-          <p>You should use numpy functions.</p>
+          <p>Don't worry about <code>Reshape</code>, <code>Transpose</code>, <code>BroadcastTo</code>, <code>Summation</code>, or <code>MatMul</code> yet — those are more involved and are covered step-by-step in sections 3.4.1–3.4.5 below.</p>
         </div>
       </div>
 
@@ -249,7 +255,8 @@ print(c._inputs)    #who are the parents? [a,b]
       <p><strong>File</strong>: <strong>babygrad/tensor.py</strong></p>
 
       <div class="hint">
-        <strong>Exercise 3.2: Implement functions.</strong>
+        <strong>Exercise 3.3: Implement functions.</strong>
+        <p>Right now, using an operation means writing <code>Add()(a, b)</code> every time. Python's dunder methods let you wire these ops directly to operators like <code>+</code>, <code>*</code>, and <code>@</code>, so you can write natural expressions like <code>a + b</code> instead.</p>
         <p>Write the following methods inside <code>Tensor</code> class.</p>
         <ul>
           <li><code>__mul__</code></li>
@@ -325,7 +332,8 @@ class Mul(Function):
       <p><strong>File</strong>: <strong>babygrad/ops.py</strong></p>
 
       <div class="hint">
-        <strong>Exercise 3.3: Implement Backward Pass</strong>
+        <strong>Exercise 3.4: Implement Backward Pass</strong>
+        <p>The forward pass computes results, but without gradients the network cannot learn. The backward pass is what lets the optimizer adjust every weight in the right direction during training.</p>
         <p>Write the <code>backward</code> method for all these classes:</p>
         <ul>
           <li>Mul</li>
@@ -397,7 +405,8 @@ class Mul(Function):
       <p>We need to convert the shape of <code>out_grad</code> back to the shape of <strong>A</strong>. To pass this gradient back to the input, we must ensure the shapes match. Since reshaping doesn't change the values—only their positions—the backward pass is just a reshape in the opposite direction.</p>
 
       <div class="hint">
-        <strong>Exercise 3.4</strong>
+        <strong>Exercise 3.5</strong>
+        <p>Neural network layers often output data in a different shape than the next layer expects -- for example, a convolutional layer produces a 4D tensor that must be flattened to 2D before a fully connected layer can use it. <code>Reshape</code> handles these shape conversions.</p>
         <p>Let's write the <code>Reshape</code> class.</p>
 <pre><code class="language-python">
 class Reshape(Function):
@@ -471,7 +480,8 @@ c & f
       <p>How do we compute this? <code>np.argsort</code> gives us exactly what we need. If we apply <code>np.argsort((1, 2, 0))</code>, we get <strong>(2, 0, 1)</strong>.</p>
 
       <div class="hint">
-        <strong>Exercise 3.5</strong>
+        <strong>Exercise 3.6</strong>
+        <p>Transpose is needed for the backward pass of matrix multiplication -- computing gradients for MatMul requires transposing matrices to align dimensions correctly.</p>
         <p>Let's write the <code>Transpose</code> class.</p>
 <pre><code class="language-python">class Transpose(Function):
     def __init__(self, axes: Optional[tuple] = None):
@@ -539,7 +549,8 @@ A &= \begin{pmatrix}
       </ul>
 
       <div class="hint">
-        <strong>Exercise 3.6</strong>
+        <strong>Exercise 3.7</strong>
+        <p>Summation collapses a tensor along an axis -- you'll need it for computing loss (reducing a batch of errors to a single number) and for the backward pass of BroadcastTo.</p>
         <p>Let's write the <code>Summation</code> class.</p>
 <pre><code class="language-python">class Summation(Function):
     def __init__(self, axes: Optional[tuple] = None):
@@ -554,7 +565,7 @@ def summation(a, axes=None):
     return Summation(axes)(a)
 </code></pre>
         <div class="note">
-          <p>You can implement backward using the reshape-and-multiply approach described above. (Later, after completing Exercise 3.7, you could also use <code>broadcast_to</code>.)</p>
+          <p>You can implement backward using the reshape-and-multiply approach described above. (Later, after completing Exercise 3.8, you could also use <code>broadcast_to</code>.)</p>
         </div>
       </div>
 
@@ -594,7 +605,8 @@ c & c & c
       </ul>
 
       <div class="hint">
-        <strong>Exercise 3.7</strong>
+        <strong>Exercise 3.8</strong>
+        <p>Broadcasting lets you add a bias vector to every row in a batch, or multiply a whole matrix by a scalar -- operations that happen constantly in neural networks.</p>
         <p>Let's write the <code>BroadcastTo</code> class.</p>
 <pre><code class="language-python">
 class BroadcastTo(Function):
@@ -650,7 +662,8 @@ def broadcast_to(a, shape):
       <p>$$\frac{\partial L}{\partial B} = A^T \cdot out\_grad$$</p>
 
       <div class="hint">
-        <strong>Exercise 3.8</strong>
+        <strong>Exercise 3.9</strong>
+        <p>Matrix multiplication is how neural network layers transform their inputs -- every <code>Linear</code> layer you'll build in Chapter 4 is just a MatMul plus a bias.</p>
         <p>Let's write the <code>MatMul</code> class.</p>
 <pre><code class="language-python">
 class MatMul(Function):
@@ -699,7 +712,8 @@ def add_scalar(a, scalar):
       <p>That's it!</p>
 
       <div class="hint">
-        <strong>Exercise 3.9: Implement Forward and Backward Pass</strong>
+        <strong>Exercise 3.10: Implement Forward and Backward Pass</strong>
+        <p>Scalar operations handle cases like <code>x + 1</code> or <code>x * 0.5</code> -- when one operand is a plain number, not a Tensor. You'll use these for scaling learning rates and normalizing values.</p>
         <p>Write the <code>forward</code> and <code>backward</code> method for all these classes:</p>
         <ul>
           <li>MulScalar</li>
@@ -805,7 +819,8 @@ class Tensor:
       <hr>
 
       <div class="hint">
-        <strong>Exercise 3.10: Implement the <code>backward</code> method</strong>
+        <strong>Exercise 3.11: Implement the <code>backward</code> method</strong>
+        <p>This is the culmination of the chapter -- you're building the engine that walks the computation graph and calls each operation's backward method in the right order. After this, your tensors can actually learn.</p>
         <p>Write the <code>backward</code> method in the <code>Tensor</code> class.</p>
 <pre><code class="language-python"># imports
 class Tensor:
