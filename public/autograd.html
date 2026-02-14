@@ -167,7 +167,7 @@ class Add(Function):
 def add(a, b):
     return Add()(a, b)  #`__call__`
 
-class Mul(Op):
+class Mul(Function):
     def forward(self, a, b):
         return a * b
     def backward(self, out_grad, node):
@@ -317,7 +317,7 @@ class Mul(Function):
 
       <p>The <strong>out_grad</strong> would be the <strong>upstream gradient</strong> coming from the output.</p>
 
-      <p><strong>File</strong>: <strong>baby/ops.py</strong></p>
+      <p><strong>File</strong>: <strong>babygrad/ops.py</strong></p>
 
       <div class="hint">
         <strong>Exercise 3.3: Implement Backward Pass</strong>
@@ -549,7 +549,7 @@ def summation(a, axes=None):
     return Summation(axes)(a)
 </code></pre>
         <div class="note">
-          <p>You can implement backward using <code>broadcast_to</code> if you have completed it or using the above simple way.</p>
+          <p>You can implement backward using the reshape-and-multiply approach described above. (Later, after completing Exercise 3.7, you could also use <code>broadcast_to</code>.)</p>
         </div>
       </div>
 
@@ -660,7 +660,7 @@ def matmul(a, b):
 
 </code></pre>
         <div class="note">
-          <p>You can implement backward using <code>summation</code> , <code>reshape</code> , <code>broadcast_to</code> and <code>matmul</code> methods .</p>
+          <p>You can implement backward using <code>summation</code>, <code>reshape</code>, and <code>broadcast_to</code> methods.</p>
         </div>
       </div>
 
@@ -668,7 +668,7 @@ def matmul(a, b):
 
       <p>Suppose we have</p>
 
-<pre><code class="language-python">x = babygrad.autograd.Tensor([1,2,3])
+<pre><code class="language-python">x = Tensor([1,2,3])
 y =x+1 </code></pre>
 
       <p>Here <code>x</code> is a Tensor and <code>1</code> is a scalar. We need a way to handle these mixed-type operations.</p>
