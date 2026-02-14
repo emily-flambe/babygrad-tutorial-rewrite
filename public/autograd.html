@@ -142,20 +142,7 @@ class Function:
 
       <p>Each tensor stores its "parents" and how it was created—like a family tree. This chain of history is what makes automatic differentiation possible: when we compute gradients, we walk backward through the graph, and each tensor knows exactly where to pass its gradients.</p>
 
-<pre><code class="language-python">from baby import Tensor
-a = Tensor([1,2,3])
-b = Tensor([2,3,4])
-c = a+b
-
-print(c.data)       # output data
->>> [3. 5. 7.]
-print(c._op)        # which operation ? '+'
->>> &lt;babygrad.ops.Add object at 0x00000248BAB0A600&gt;
-print(c._inputs)    #who are the parents? [a,b]
->>> [Tensor([1. 2. 3.], requires_grad=True), Tensor([2. 3. 4.],
-     requires_grad=True)]</code></pre>
-
-      <p>Now that we're done with the <code>Function</code> class, we can add some operations.</p>
+      <p>Now let's define some concrete operations that subclass <code>Function</code>.</p>
 
       <h2>3.2 Forward Pass</h2>
 
@@ -240,6 +227,19 @@ def mul(a, b):
     </code></pre>
 
       <p>Now we can add two Tensors without any problem. <code>tensor_a + tensor_b</code> will just work.</p>
+
+<pre><code class="language-python">from babygrad import Tensor
+a = Tensor([1,2,3])
+b = Tensor([2,3,4])
+c = a+b
+
+print(c.data)       # output data
+>>> [3. 5. 7.]
+print(c._op)        # which operation ? '+'
+>>> &lt;babygrad.ops.Add object at 0x00000248BAB0A600&gt;
+print(c._inputs)    #who are the parents? [a,b]
+>>> [Tensor([1. 2. 3.], requires_grad=True), Tensor([2. 3. 4.],
+     requires_grad=True)]</code></pre>
 
       <p><strong>File</strong>: <strong>babygrad/tensor.py</strong></p>
 
