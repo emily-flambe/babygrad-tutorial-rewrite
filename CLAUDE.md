@@ -34,11 +34,55 @@ When creating or updating chapter content:
 
 ## File Organization
 
-- `/public/` — Tutorial HTML files
+- `/public/` — Tutorial HTML files (14 chapters + styles + JS)
+- `/public/styles.css` — Shared stylesheet
+- `/public/copy.js` — Code block copy-to-clipboard functionality
 - `wrangler.toml` — Cloudflare Workers config
 - `CLAUDE.md` — This file
 
 The actual babygrad implementation lives in a separate repo: `emily-flambe/deep-learning-library`
+
+## babygrad Library Architecture
+
+The tutorial teaches building a from-scratch deep learning library. The dependency chain is:
+
+```
+tensor.py → ops.py → init.py → nn.py → optim.py → data.py → trainer.py
+```
+
+### Module/File Structure (as taught)
+
+```
+babygrad/
+├── __init__.py      # Exports: Tensor, ops
+├── tensor.py        # Tensor class with autograd (backward, factory methods)
+├── ops.py           # Function base class + all ops (Add, Mul, MatMul, Conv, etc.)
+├── init.py          # Xavier/Kaiming initialization functions
+├── nn.py            # Module, Linear, Sequential, BatchNorm1d, LayerNorm1d,
+│                    #   Dropout, ReLU, Sigmoid, Tanh, Flatten, SoftmaxLoss,
+│                    #   Residual, Conv (nn wrapper)
+├── optim.py         # Optimizer, SGD, Adam
+├── data.py          # Dataset, MNISTDataset, CIFAR10Dataset, DataLoader
+└── trainer.py       # Trainer class (fit/evaluate)
+```
+
+### Key Naming Conventions
+
+- Base class for operations: `Function` (NOT `Op` or `TensorOp`)
+- Op methods: `forward()` and `backward()` (NOT `compute`/`gradient`)
+- Package name: `babygrad` (NOT `baby`)
+- File paths: `babygrad/ops.py` (NOT `baby/ops.py`)
+- Gradient zeroing: `optimizer.zero_grad()` (NOT `reset_grad`)
+- Setting evaluation mode: `model.eval()` (NOT `set_inference_mode()`)
+- Evaluation method: `trainer.evaluate()` (NOT `assess()`)
+
+### Common Pitfalls When Editing
+
+1. **Multi-line imports**: Must use parentheses or backslash for line continuation
+2. **Line continuations in code blocks**: HTML `<pre><code>` preserves line breaks literally — broken Python across lines is a SyntaxError if copied
+3. **Folder structure diagrams**: Must stay in sync with which files have been introduced up to that chapter
+4. **Exercise numbering**: Must match the chapter number (e.g., Chapter 10 exercises are 10.x, not 2.x)
+5. **Forward references**: Don't reference functions/classes before the tutorial introduces them
 
 ## Deployment
 
