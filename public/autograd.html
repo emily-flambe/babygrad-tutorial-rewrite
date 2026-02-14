@@ -183,6 +183,18 @@ def mul(a, b):
 
       <p>Not too hard, right? We just completed the forward pass of <code>Add()</code>.</p>
 
+      <details class="context">
+        <summary>Why so many operations?</summary>
+        <div class="context-body">
+          <p><strong>Arithmetic</strong> ops like <code>Sub</code>, <code>Div</code>, and <code>Pow</code> are the basic math behind loss functions and weighted sums.</p>
+          <p><strong>Activation functions</strong> like <code>ReLU</code>, <code>Sigmoid</code>, and <code>Tanh</code> go between layers to introduce nonlinearity. Without them, stacking 100 layers would be no better than one.</p>
+          <p><strong>MatMul</strong> is the core of every neural network layer. Every <code>Linear</code> layer you'll build in Chapter 4 is just a matrix multiply plus a bias.</p>
+          <p><strong>Shape operations</strong> like <code>Reshape</code>, <code>Transpose</code>, and <code>BroadcastTo</code> are plumbing. Real data comes in awkward shapes, and these let you reshape, flip, and stretch tensors so the math works out.</p>
+          <p><strong>Utility</strong> functions like <code>Log</code>, <code>Exp</code>, and <code>Sqrt</code> appear in specific places: <code>Log</code> in cross-entropy loss, <code>Exp</code> in softmax, <code>Sqrt</code> in normalization.</p>
+          <p>You won't use them all at once, but by the end of the tutorial you'll have used every single one.</p>
+        </div>
+      </details>
+
       <div class="hint">
         <strong>Exercise 3.2: Write the <code>forward</code> method for these operations.</strong>
         <p>Each one follows the same pattern as <code>Add</code> and <code>Mul</code> above: take numpy arrays in, return a numpy array out. Use the corresponding numpy function.</p>

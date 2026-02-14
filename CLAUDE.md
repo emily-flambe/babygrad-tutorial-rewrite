@@ -84,6 +84,13 @@ babygrad/
 4. **Exercise numbering**: Must match the chapter number (e.g., Chapter 10 exercises are 10.x, not 2.x)
 5. **Forward references**: Don't reference functions/classes before the tutorial introduces them
 
+## Visual Verification
+
+Use Playwright to visually verify CSS and layout changes before committing:
+- Take a screenshot at wide viewport (1440px) to check margin notes and layout
+- Take a screenshot at narrow viewport (768px) to check mobile collapse
+- Verify no content is clipped or overlapping
+
 ## Deployment
 
 The site auto-deploys on push to `main` via Cloudflare git integration.

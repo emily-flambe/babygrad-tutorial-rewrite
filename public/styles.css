@@ -232,6 +232,49 @@ a {
   color: #666;
 }
 
+/* Expandable "why" context — progressive disclosure */
+details.context {
+  margin: 1rem 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0;
+  background: #f0f1f3;
+}
+
+details.context summary {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #555;
+  list-style: none;
+}
+
+details.context summary::-webkit-details-marker {
+  display: none;
+}
+
+details.context summary::before {
+  content: "";
+  display: inline-block;
+  width: 2.4em;
+  height: 2.4em;
+  background: url("bee.png") no-repeat center / contain;
+  vertical-align: middle;
+  margin-right: 0.4em;
+}
+
+details.context .context-body {
+  padding: 0 1rem 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+details.context .context-body p {
+  margin: 0.3rem 0;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .sidebar {
