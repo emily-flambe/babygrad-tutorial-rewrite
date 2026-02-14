@@ -177,7 +177,7 @@ class Module:
         Returns a list of all parameters in the module and its submodules.
         """
         # self.__dict__ is a dictionary containing all the
-         instance's attributes.
+        # instance's attributes.
         # We pass it to our helper to recursively find all Parameters.
         params = _get_parameters(self.__dict__)
         unique_params = []
@@ -305,7 +305,7 @@ class Sigmoid(Module):
 
       <p>Suppose there is a matrix of shape (2,3,4,5). Flatten will just reshape the matrix into (2,60). Flatten is extremely useful in <code>CNN</code>.</p>
 
-      <p><strong>FILE</strong> : <strong>baby/nn.py</strong></p>
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
 
       <div class="exercise">
         <strong>Exercise 4.2</strong>
@@ -343,7 +343,7 @@ class Sigmoid(Module):
     output = x @ Weight + bias
 \]</p>
 
-      <p><strong>FILE</strong> : <strong>baby/nn.py</strong></p>
+      <p><strong>FILE</strong> : <strong>babygrad/nn.py</strong></p>
 
       <ul>
         <li>Wrap <code>self.weight</code> and <code>self.bias</code> with <code>Parameter</code>.</li>
@@ -417,7 +417,7 @@ class Sigmoid(Module):
         <strong>Exercise 4.4</strong>
         <p>Let's write the <strong>Sequential</strong> class.</p>
 <pre><code>class Sequential(Module):
-    A container that chains a sequence of modules together.
+    """A container that chains a sequence of modules together.
     Example:
         # A simple 2-layer MLP for MNIST
         model = nn.Sequential(
@@ -662,10 +662,11 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
     def forward(self, x: Tensor) -> Tensor:
         #x.shape (bs,dim)
         if self.training:
-            self.running_mean.data = (1 - self.momentum) *
-                    self.running_mean.data + self.momentum * mean.data
-            self.running_var.data = (1 - self.momentum) *
-                        self.running_var.data + self.momentum * var.data
+            # First compute mean and var from the current batch, then:
+            self.running_mean.data = ((1 - self.momentum) *
+                    self.running_mean.data + self.momentum * mean.data)
+            self.running_var.data = ((1 - self.momentum) *
+                        self.running_var.data + self.momentum * var.data)
         else:
             mean_to_use = self.running_mean
             var_to_use = self.running_var
@@ -755,7 +756,7 @@ x_{\text{norm}_i} = \frac{x_i - \text{mean}}{\sqrt{\text{var} + \epsilon}}
         logsumexp_val = ops.logsumexp(logits, axes=(1,))
         h_y = (logits * y_one_hot).sum(axes=(1,))
 
-        return (logsumexp_val - h_y).sum() / n</code></pre>
+        return (logsumexp_val - h_y).sum() / Tensor(n)</code></pre>
         <div class="hint">
           <strong>Note</strong>
           <p>You should write <code>ops.logsumexp</code> instead of doing it here.</p>

@@ -51,7 +51,7 @@ for epoch in range(10):
         <pre><code>project/
 ├─ .venv/
 ├─ babygrad/
-|   ├─ trainer.py
+│   ├─ trainer.py
 │   ├─ __init__.py
 │   ├─ data.py
 │   ├─ init.py
@@ -123,7 +123,7 @@ class Trainer:
             return 0.0
         # Hint:
         # 1. Set model to evaluation mode: self.model.eval()
-        # 2. Loop over self.val_loader
+        # 2. Loop over target_loader
         # 3. Forward pass only (no backward)
         # 4. Compare predictions to true labels (use argmax(axis=1))
         # 5. Sum the correct predictions and calculate the average.

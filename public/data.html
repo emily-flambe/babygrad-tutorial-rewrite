@@ -187,7 +187,7 @@ dataset = MyDataset(transforms=[normalize, add_noise])</code></pre>
       </ul>
 
       <div class="exercise">
-        <h3>Exercise 5.1</h3>
+        <h3>Exercise 6.2</h3>
 
         <pre><code>class DataLoader:
     """Provides an iterator for easy batching, shuffling, and loading of
@@ -196,6 +196,7 @@ dataset = MyDataset(transforms=[normalize, add_noise])</code></pre>
         dataset (Dataset):
         batch_size (int, optional):
         shuffle (bool, optional):
+    """
     def __init__(self,
                  dataset: Dataset,
                 batch_size: int = 1,

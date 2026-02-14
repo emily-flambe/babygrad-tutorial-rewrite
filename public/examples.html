@@ -140,8 +140,7 @@ def train_epoch(model: SimpleNN, X_train: np.ndarray, y_train: np.ndarray,
         preds = logits.data.argmax(axis=1)
         acc = np.mean(preds == y_batch_np)
 
-        print(f"Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f},
-                 Accuracy = {acc*100:.2f}%")
+        print(f"Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f}, Accuracy = {acc*100:.2f}%")
 if __name__ == "__main__":
     EPOCHS = 3
     LEARNING_RATE = 0.1
@@ -177,11 +176,11 @@ if __name__ == "__main__":
       <h2>12.2 Decent MNIST</h2>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Dropout, Module, Linear, ReLU,
-Sequential, SoftmaxLoss, LayerNorm1d, BatchNorm1d
-from baby.data import MNISTDataset, DataLoader
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Dropout, Module, Linear, ReLU,
+    Sequential, SoftmaxLoss, LayerNorm1d, BatchNorm1d, Flatten)
+from babygrad.data import MNISTDataset, DataLoader
 
 def train_epoch(model: Module, loss_fn: Module, optimizer: Adam,
              train_loader: DataLoader):
@@ -189,15 +188,14 @@ def train_epoch(model: Module, loss_fn: Module, optimizer: Adam,
         logits = model(x_batch)
         loss = loss_fn(logits, y_batch.data)
 
-        optimizer.reset_grad()
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         preds = logits.data.argmax(axis=1)
         acc = np.mean(preds == y_batch.data)
 
-        print(f"Batch {batch_idx+1:3d}: Loss = {loss.data:.4f},
-                 Accuracy = {acc*100:.2f}%")
+        print(f"Batch {batch_idx+1:3d}: Loss = {loss.data:.4f}, Accuracy = {acc*100:.2f}%")
 
 def evaluate(model: Module, test_loader: DataLoader):
     model.eval()
@@ -256,12 +254,12 @@ if __name__ == "__main__":
       <h2>12.3 Better MNIST</h2>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Dropout, Flatten, Linear,
- ReLU, Sequential, SoftmaxLoss, BatchNorm1d
-from baby.data import MNISTDataset, DataLoader
-from baby.trainer import Trainer
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Dropout, Flatten, Linear,
+    ReLU, Sequential, SoftmaxLoss, BatchNorm1d)
+from babygrad.data import MNISTDataset, DataLoader
+from babygrad.trainer import Trainer
 
 if __name__ == "__main__":
     EPOCHS = 5
@@ -309,12 +307,12 @@ if __name__ == "__main__":
       <p><strong>CIFAR10</strong> Will use <strong>NCHW</strong> only.</p>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Module, Conv, Linear, ReLU,
- Sequential,Dropout, SoftmaxLoss, Flatten, BatchNorm1d
-from baby.data import MNISTDataset, DataLoader
-from baby.trainer import Trainer
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Module, Conv, Linear, ReLU,
+    Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d)
+from babygrad.data import MNISTDataset, DataLoader
+from babygrad.trainer import Trainer
 
 
 class SimpleCNN(Module):
@@ -416,12 +414,12 @@ End of Epoch 2 - Avg Loss: 0.0443 | Val Acc: 98.21%
       <h2>12.5 Better CNN</h2>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Module, Conv, Linear,
- ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
-from baby.data import MNISTDataset, DataLoader
-from baby.trainer import Trainer
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Module, Conv, Linear,
+    ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d)
+from babygrad.data import MNISTDataset, DataLoader
+from babygrad.trainer import Trainer
 
 class HierarchicalCNN(Module):
     def __init__(self):
@@ -576,12 +574,12 @@ class CIFAR10Dataset(Dataset):
         return len(self.images)</code></pre>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Module, Conv,
- Linear, ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
-from baby.data import DataLoader,CIFAR10Dataset
-from baby.trainer import Trainer
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Module, Conv,
+    Linear, ReLU, Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d)
+from babygrad.data import DataLoader, CIFAR10Dataset
+from babygrad.trainer import Trainer
 
 class CIFAR10CNN(Module):
     """
@@ -672,12 +670,12 @@ End of Epoch 3 - Avg Loss: 0.7867 | Val Acc: 65.34%</code></pre>
       <h2>12.7 Simple Resnet</h2>
 
       <pre><code>import numpy as np
-from baby import Tensor
-from baby.optim import Adam
-from baby.nn import Module, Conv, Linear, ReLU,
- Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d
-from baby.data import DataLoader,CIFAR10Dataset
-from baby.trainer import Trainer
+from babygrad import Tensor
+from babygrad.optim import Adam
+from babygrad.nn import (Module, Conv, Linear, ReLU,
+    Sequential, Dropout, SoftmaxLoss, Flatten, BatchNorm1d, Residual)
+from babygrad.data import DataLoader, CIFAR10Dataset
+from babygrad.trainer import Trainer
 
 class MiniResNet(Module):
     def __init__(self):

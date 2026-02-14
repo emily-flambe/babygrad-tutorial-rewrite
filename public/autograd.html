@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 3: Automatic Differentiation — babygrad</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 </head>
 <body>
   <div class="container">
@@ -44,9 +44,10 @@
 <pre><code>project/
 ├─ .venv/          # virtual environment folder
 ├─ babygrad/
+│   ├─ __init__.py
 │   ├─ tensor.py   #Tensor code
 │
-├─ examples/        # example scripts using baby
+├─ examples/        # example scripts using babygrad
 └─ tests/           # unit tests
 </code></pre>
       </div>
@@ -85,7 +86,7 @@ class Function:
             out_grad: upstream gradient flowing from output to input
             node: Value object holding inputs from forward pass
         """
-        pass</code></pre>
+        raise NotImplementedError()</code></pre>
 
       <p>This is simple Base class for All our Functions. All the <strong>Functions</strong> will be subclass of <strong>Function</strong>.</p>
 
@@ -153,7 +154,7 @@ class Function:
         <li><code>add</code></li>
         <li><code>mul</code></li>
         <li><code>sub</code></li>
-        <li>or any other mathematically valid operation.</li>
+        <li>or any other differentiable operation (with a corresponding backward pass).</li>
       </ul>
 
       <p><strong>File</strong> : <strong>babygrad/ops.py</strong></p>
@@ -175,6 +176,10 @@ class Mul(Function):
         return out_grad*b,out_grad*a
 def mul(a, b):
     return Mul()(a, b)</code></pre>
+
+      <div class="note">
+        <p>Don't worry about <code>backward</code> yet — we're only focusing on <code>forward</code> for now. You'll see <code>backward</code> defined alongside it because the two always live together, but we'll explain what <code>out_grad</code> is and where it comes from in section 3.5.</p>
+      </div>
 
       <p>Not too hard, right? We just completed the forward pass of <code>Add()</code>.</p>
 
@@ -650,7 +655,7 @@ def broadcast_to(a, shape):
 <pre><code class="language-python">
 class MatMul(Function):
     def forward(self, a, b):
-        # can you use np.matul?
+        # can you use np.matmul?
     def backward(self, out_grad, node):
         # your solution
 
@@ -744,7 +749,7 @@ class Tensor:
             #your code
 
         build_topo(self)
-        grads = {}
+
         for node in reversed(topo_order):
             #your code </code></pre>
 

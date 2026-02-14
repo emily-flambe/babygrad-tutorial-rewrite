@@ -50,9 +50,9 @@ output = model(image)</code></pre>
         <p>It follows the <strong>NHWC</strong> convention (We will use this):</p>
         <ul>
           <li><strong>N (Batch Size)</strong>: The number of images in the stack.</li>
-          <li><strong>C (Channels)</strong>: The depth (e.g., 3 for RGB, 1 for Grayscale).</li>
           <li><strong>H (Height)</strong></li>
           <li><strong>W (Width)</strong></li>
+          <li><strong>C (Channels)</strong>: The depth (e.g., 3 for RGB, 1 for Grayscale).</li>
         </ul>
         <p>Some libraries use <strong>NCHW</strong>!</p>
       </div>
@@ -456,11 +456,11 @@ print(output)
 
       <h2>10.7 Conv Forward</h2>
 
-      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+      <p><strong>FILE</strong>: <strong>babygrad/ops.py</strong></p>
 
       <div class="exercise">
-        <h3>Exercise 2.1</h3>
-        <pre><code>class Conv(TensorOp):
+        <h3>Exercise 10.1</h3>
+        <pre><code>class Conv(Function):
     def __init__(self, stride= 1, padding=0):
         self.stride = stride
         self.padding = padding
@@ -476,7 +476,7 @@ print(output)
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)</code></pre>
         <div class="note">
-          <p>Use <code>A.pad</code> if needed.</p>
+          <p>Use <code>np.pad</code> if needed.</p>
         </div>
       </div>
 
@@ -526,10 +526,10 @@ def conv(a, b, stride=1, padding=1):
 
       <p>Let's implement <strong>Flip</strong>.</p>
 
-      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+      <p><strong>FILE</strong>: <strong>babygrad/ops.py</strong></p>
 
       <div class="exercise">
-        <h3>Exercise 11.2</h3>
+        <h3>Exercise 10.2</h3>
         <pre><code>class Flip(Function):
     def __init__(self, axes=None):
         self.axes = axes
@@ -593,10 +593,10 @@ new_a[0,len(new_a), 2] = a
 
       <p>Let's implement <code>Dilate</code>.</p>
 
-      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+      <p><strong>FILE</strong>: <strong>babygrad/ops.py</strong></p>
 
       <div class="exercise">
-        <h3>Exercise 11.3</h3>
+        <h3>Exercise 10.3</h3>
         <pre><code>class Dilate(Function):
     def __init__(self,axes, dilation ):
         self.axes = axes
@@ -708,12 +708,12 @@ def dilate(a, axes, dilation=1):
         <li>Tranpose to original.</li>
       </ul>
 
-      <p><strong>FILE</strong>: <strong>baby/ops.py</strong></p>
+      <p><strong>FILE</strong>: <strong>babygrad/ops.py</strong></p>
 
       <p>Now we can use the above helper functions to do the magic.</p>
 
       <div class="exercise">
-        <h3>Exercise 2.2</h3>
+        <h3>Exercise 10.4</h3>
         <pre><code>class Conv(Function):
     def __init__(self, stride= 1, padding=0):
         self.stride = stride
@@ -748,7 +748,7 @@ def conv(a, b, stride=1, padding=1):
 
       <p>This will be pretty simple to implement. We will just need to use the <code>ops.conv</code> we implemented earlier and that's it.</p>
 
-      <p><strong>FILE</strong>: <strong>baby/nn.py</strong></p>
+      <p><strong>FILE</strong>: <strong>babygrad/nn.py</strong></p>
 
       <p>Many image datasets return in <code>NCHW</code>, so we have to first <code>transpose</code> them to <code>NHWC</code> and then call <code>ops.conv</code> that was written above. And then again <code>transpose</code> back to the original form.</p>
 
@@ -781,7 +781,8 @@ def conv(a, b, stride=1, padding=1):
             dtype=dtype
         ))
         if bias:
-            self.bias = Parameter(init.zeros(out_channels))
+            bound = 1.0 / (in_channels * kernel_size * kernel_size) ** 0.5
+            self.bias = Parameter(Tensor.rand(out_channels, low=-bound, high=bound))
         else:
             self.bias = None
         self.padding = (self.kernel_size - 1) // 2

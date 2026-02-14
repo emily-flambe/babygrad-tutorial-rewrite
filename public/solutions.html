@@ -930,7 +930,7 @@ def logsumexp(a: Tensor, axes: Optional[tuple] = None) -> Tensor:
         label_filename: str,
         transforms: Optional[List] = None,
     ):
-        self.images, self.labels = parse_mnist(image_filesname=image_filename
+        self.images, self.labels = parse_mnist(image_filename=image_filename
             , label_filename=label_filename)
         self.transforms = transforms
     def __getitem__(self, index) -> object:
@@ -971,7 +971,7 @@ def logsumexp(a: Tensor, axes: Optional[tuple] = None) -> Tensor:
       </ul>
 
       <pre><code>class DataLoader:
-    def __init__(self,dataset:Dataset, batch_size:int=1,shuffle: bool):
+    def __init__(self,dataset:Dataset, batch_size:int=1,shuffle: bool=True):
         self.dataset = dataset
         self.shuffle = shuffle
         self.batch_size = batch_size
@@ -1162,17 +1162,17 @@ def kaiming_normal(fan_in: int, fan_out: int, nonlinearity: str = "relu",
             print(f"End of Epoch {epoch+1} - Avg Loss: {avg_loss:.4f}", end="")
 
             if self.val_loader is not None:
-                val_acc = self.assess()
+                val_acc = self.evaluate()
                 print(f" | Val Acc: {val_acc*100:.2f}%")
             else:
                 print()
 
-    def assess(self, loader=None):
+    def evaluate(self, loader=None):
         target_loader = loader if loader is not None else self.val_loader
         if target_loader is None:
             return 0.0
 
-        self.model.set_inference_mode()
+        self.model.eval()  # set model to evaluation mode
         correct = 0
         total = 0
 
@@ -1241,9 +1241,9 @@ def kaiming_normal(fan_in: int, fan_out: int, nonlinearity: str = "relu",
       <pre><code>class Flip(Function):
     def __init__(self, axes=None):
         self.axes = axes
-    def compute(self,a):
+    def forward(self,a):
         return np.flip(a, self.axes)
-    def gradient(self,out_grad,node):
+    def backward(self,out_grad,node):
         return flip(out_grad,self.axes)
 
 def flip(a, axes):

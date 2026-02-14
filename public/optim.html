@@ -269,11 +269,11 @@ optimizer.step()</code></pre>
         self.t += 1
         for param in self.params:
             grad = param.grad
-            mt = self.m.get(param, 0) * self.beta1 + (1 - self.beta1)
-                 * grad
+            mt = (self.m.get(param, 0) * self.beta1
+                  + (1 - self.beta1) * grad)
             self.m[param] = mt
-            vt = self.v.get(param, 0) * self.beta2 + (1 - self.beta2)
-                 * (grad ** 2)
+            vt = (self.v.get(param, 0) * self.beta2
+                  + (1 - self.beta2) * (grad ** 2))
             self.v[param] = vt
 
 

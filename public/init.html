@@ -37,6 +37,7 @@
 ├─ .venv/
 ├─ babygrad/
 │   ├─ __init__.py
+│   ├─ data.py
 │   ├─ init.py
 │   ├─ ops.py
 │   ├─ tensor.py
@@ -139,7 +140,7 @@ constant probability of being chosen.</code></pre>
 
       <div class="exercise">
         <h4>Exercise 7.3: Implement <code>kaiming_uniform</code> function.</h4>
-        <pre><code>def kaiming_uniform(fan_in: int, fan_out: int **kwargs):
+        <pre><code>def kaiming_uniform(fan_in: int, fan_out: int, **kwargs):
     """
     Kaiming uniform initialization.
     """
@@ -153,9 +154,9 @@ constant probability of being chosen.</code></pre>
 
       <div class="exercise">
         <h4>Exercise 7.4: Implement <code>kaiming_normal</code> function.</h4>
-        <pre><code>def kaiming_normal(fan_in: int, fan_out: int **kwargs):
+        <pre><code>def kaiming_normal(fan_in: int, fan_out: int, **kwargs):
     """
-    Kaiming uniform initialization.
+    Kaiming normal initialization.
     """
     #your code
     #use Tensor.randn</code></pre>
