@@ -83,6 +83,7 @@ babygrad/
 3. **Folder structure diagrams**: Must stay in sync with which files have been introduced up to that chapter
 4. **Exercise numbering**: Must match the chapter number (e.g., Chapter 10 exercises are 10.x, not 2.x)
 5. **Forward references**: Don't reference functions/classes before the tutorial introduces them
+6. **Runnable code snippets**: Every executable code snippet must be preceded by all the code needed to run it — imports, definitions, type aliases. If a snippet uses `NDArray`, the tutorial must have already shown `NDArray = np.ndarray` in a prior chapter or reminded the reader.
 
 ## Visual Verification
 
