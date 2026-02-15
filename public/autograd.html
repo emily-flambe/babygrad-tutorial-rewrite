@@ -304,51 +304,159 @@ print(c._inputs)    #who are the parents? [a,b]
         <p>A measure of how much the final error changes when we change a specific input or weight.</p>
       </div>
 
-      <p><strong>Local derivatives</strong> are the heart of the <strong>chain rule</strong>. The "magic" of autograd is that it breaks a massive problem into small, manageable pieces using local derivatives.</p>
+      <details class="context">
+        <summary>I'm rusty on derivatives — what does "how much it changes" mean?</summary>
+        <div class="context-body">
+          <p>If you're rusty on derivatives, 3Blue1Brown's <a href="https://www.youtube.com/watch?v=9vKqVkMQHKk">The paradox of the derivative</a> is an excellent 17-minute refresher. It builds the intuition for what "rate of change" means without assuming you remember the formulas.</p>
+        </div>
+      </details>
 
-      <p>Instead of trying to solve for a 100-layer neural network all at once, we solve it one operation at a time. Each <code>Function</code> class only needs to know its own local derivative. When we chain them together during the backward pass, these local pieces multiply together via the chain rule to give us the global gradient for every parameter in the system.</p>
+      <p>Let's walk through a concrete example.</p>
 
-      <p><strong>Example</strong></p>
+<pre><code class="language-python">a = babygrad.Tensor([2, 3], dtype="float32")
+b = babygrad.Tensor([4, 5], dtype="float32")
+w = babygrad.Tensor([3, 2], dtype="float32")
 
-<pre><code class="language-python">a = babygrad.Tensor([1, 2, 3], dtype="float32")
-b = babygrad.Tensor([2, 3, 4], dtype="float32")
+c = a * b    # step 1: multiply → c = [8, 15]
+d = c * w    # step 2: multiply again → d = [24, 30]</code></pre>
 
-c = a + b
-d = c + babygrad.Tensor([3, 5, 3], dtype="float32")</code></pre>
+      <p>We want to know: <strong>if we nudge <code>a</code> slightly, how much does <code>d</code> change?</strong> That's the gradient of <code>d</code> with respect to <code>a</code>.</p>
 
-      <p>$$\frac{\partial d}{\partial a} = \frac{\partial d}{\partial c} \cdot \frac{\partial c}{\partial a}$$</p>
+      <p>Since these are tensors, "nudge" means one element at a time. The gradient is a tensor of the same shape as <code>a</code>, where each element answers "if I change this element, how much does the output change?"</p>
 
-      <p>$$\frac{\partial d}{\partial b} = \frac{\partial d}{\partial c} \cdot \frac{\partial c}{\partial b}$$</p>
+      <p>Let's check by hand. Nudge <code>a[0]</code> from 2 to 2.01:</p>
+      <ul>
+        <li><code>c[0]</code> = 2.01 × 4 = 8.04 (was 8)</li>
+        <li><code>d[0]</code> = 8.04 × 3 = 24.12 (was 24) — changed by <strong>0.12</strong></li>
+      </ul>
+      <p>We nudged by 0.01 and the output moved by 0.12. The gradient for <code>a[0]</code> is 0.12 / 0.01 = <strong>12</strong>. That's <code>b[0] × w[0]</code> = 4 × 3! The change in <code>a</code> got amplified by <code>b</code> in the first multiply, then amplified again by <code>w</code> in the second multiply.</p>
 
-      <p>As we said, gradients flow from right to left. The question is: what is the gradient of the output?</p>
+      <p>Similarly, <code>a[1]</code>'s gradient is <code>b[1] × w[1]</code> = 5 × 2 = <strong>10</strong>. So the full gradient is <code>[12, 10]</code>.</p>
 
-      <p>$$\frac{\partial d}{\partial d} = 1$$</p>
+      <details class="context">
+        <summary>What does "nudge a tensor" actually mean? What if they're different shapes?</summary>
+        <div class="context-body">
+          <p>Each element of the gradient tracks one element of <code>a</code>. We nudge one element, hold everything else constant, and measure how the output changes.</p>
+          <p>What if the tensors have different shapes? For example, summing <code>[1, 2, 3]</code> to a single number <code>6</code> gives a gradient of <code>[1, 1, 1]</code> — each element contributed equally. The rule: <strong>the gradient always has the same shape as the thing you're differentiating with respect to.</strong> That's why we need shape-changing ops like <code>Summation</code>, <code>BroadcastTo</code>, and <code>Reshape</code> in sections 3.4.1–3.4.5.</p>
+        </div>
+      </details>
 
-      <p>It is simply just <strong>1</strong>. This is the <strong>upstream derivative</strong>. This upstream gradient of 1 flows backward into c. Then c applies its local derivative (\(\frac{\partial c}{\partial a} = 1\), \(\frac{\partial c}{\partial b} = 1\)) and passes gradients further to a and b.</p>
+      <p>How do we compute <code>[12, 10]</code> systematically (without nudging by hand)? The <strong>chain rule</strong> says: break the chain of operations into small steps, compute each step's derivative, and multiply them together.</p>
 
-      <p>Let's look at the backward pass of <code>Add</code>:</p>
+      <p><code>a</code> doesn't affect <code>d</code> directly — it goes through <code>c</code> first. So we ask two smaller questions:</p>
+
+      <ol>
+        <li>If we nudge <code>c</code>, how much does <code>d</code> change? Since <code>d = c * w</code>, the answer is <strong>w = [3, 2]</strong> — each element of <code>c</code> gets scaled by the corresponding element of <code>w</code>.</li>
+        <li>If we nudge <code>a</code>, how much does <code>c</code> change? Since <code>c = a * b</code>, the answer is <strong>b = [4, 5]</strong> — each element of <code>a</code> gets scaled by the corresponding element of <code>b</code>.</li>
+      </ol>
+
+      <p>Multiply them together: <code>[3, 2] × [4, 5]</code> = <code>[12, 10]</code>. Same answer we got by hand!</p>
+
+      <p>$$\frac{\partial d}{\partial a} = \frac{\partial d}{\partial c} \cdot \frac{\partial c}{\partial a} = w \cdot b = [3,2] \cdot [4,5] = [12, 10]$$</p>
+
+      <p>What about <code>b</code>? Same idea, separate formula. When we ask "how does changing <code>a</code> affect <code>d</code>?", we hold <code>b</code> constant — it's irrelevant to that question. <code>b</code> gets its own chain:</p>
+
+      <p>$$\frac{\partial d}{\partial b} = \frac{\partial d}{\partial c} \cdot \frac{\partial c}{\partial b} = w \cdot a = [3,2] \cdot [2,3] = [6, 6]$$</p>
+
+      <details class="context">
+        <summary>Why does this work?</summary>
+        <div class="context-body">
+          <p>Each small derivative (like "how does <code>c</code> change when I change <code>a</code>?") is called a <strong>local derivative</strong> — it only involves one operation. The "magic" of autograd is that each <code>Function</code> class only needs to know its own local derivative. When we multiply them together via the chain rule, we get the <strong>global gradient</strong> — how the final output depends on any input, no matter how many operations are in between.</p>
+          <p>This is how a 100-layer neural network becomes tractable: we never solve the whole thing at once, just one operation at a time.</p>
+          <p>3Blue1Brown has two excellent videos on this: <a href="https://www.youtube.com/watch?v=YG15m2VwSjA">Visualizing the chain rule</a> builds the intuition with animations, and <a href="https://www.youtube.com/watch?v=tIeHLnjs5U8">Backpropagation calculus</a> shows how it applies to neural networks.</p>
+        </div>
+      </details>
+
+      <h3>Walking backward step by step</h3>
+
+      <details class="context">
+        <summary>I'm lost — is there a video that explains this?</summary>
+        <div class="context-body">
+          <p>3Blue1Brown's <a href="https://www.youtube.com/watch?v=Ilg3gGewQ5U">What is backpropagation really doing?</a> walks through the same idea — starting at the output and working backward — with animations. It's 13 minutes and covers exactly what we're about to do in code.</p>
+        </div>
+      </details>
+
+      <p>In practice, we compute gradients by starting at the output and working backward one node at a time. Here's the computation graph for our example:</p>
+
+      <p><strong>Step 1: <code>c = a × b</code></strong></p>
+      <svg viewBox="0 0 460 160" style="max-width:460px;width:100%;height:auto;font-family:inherit;margin:0.5em 0 1em;">
+        <defs>
+          <marker id="fwd" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#1976d2"/>
+          </marker>
+        </defs>
+        <rect x="20" y="20" width="90" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="65" y="41" text-anchor="middle" font-size="13" font-weight="bold">a = [2, 3]</text>
+        <rect x="20" y="80" width="90" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="65" y="101" text-anchor="middle" font-size="13" font-weight="bold">b = [4, 5]</text>
+        <rect x="175" y="50" width="44" height="32" rx="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+        <text x="197" y="71" text-anchor="middle" font-size="16" font-weight="bold">×</text>
+        <rect x="290" y="50" width="100" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="340" y="71" text-anchor="middle" font-size="13" font-weight="bold">c = [8, 15]</text>
+        <line x1="110" y1="36" x2="173" y2="60" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <line x1="110" y1="96" x2="173" y2="72" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <line x1="219" y1="66" x2="288" y2="66" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <text x="340" y="106" text-anchor="middle" font-size="11" fill="#c62828">a.grad = b = [4, 5]</text>
+        <text x="340" y="122" text-anchor="middle" font-size="11" fill="#c62828">b.grad = a = [2, 3]</text>
+        <text x="340" y="145" text-anchor="middle" font-size="10" fill="#999">(for a single × op)</text>
+      </svg>
+
+      <p><strong>Step 2: <code>d = c × w</code></strong> — now chain two operations together:</p>
+      <svg viewBox="0 0 460 160" style="max-width:460px;width:100%;height:auto;font-family:inherit;margin:0.5em 0 1em;">
+        <rect x="20" y="20" width="100" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="70" y="41" text-anchor="middle" font-size="13" font-weight="bold">c = [8, 15]</text>
+        <rect x="20" y="80" width="90" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="65" y="101" text-anchor="middle" font-size="13" font-weight="bold">w = [3, 2]</text>
+        <rect x="185" y="50" width="44" height="32" rx="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+        <text x="207" y="71" text-anchor="middle" font-size="16" font-weight="bold">×</text>
+        <rect x="295" y="50" width="110" height="32" rx="6" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+        <text x="350" y="71" text-anchor="middle" font-size="13" font-weight="bold">d = [24, 30]</text>
+        <line x1="120" y1="36" x2="183" y2="60" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <line x1="110" y1="96" x2="183" y2="72" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <line x1="229" y1="66" x2="293" y2="66" stroke="#1976d2" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <text x="350" y="106" text-anchor="middle" font-size="11" fill="#c62828">c.grad = w = [3, 2]</text>
+        <text x="350" y="130" text-anchor="middle" font-size="10" fill="#c62828">then chain rule:</text>
+        <text x="350" y="146" text-anchor="middle" font-size="11" fill="#c62828">a.grad = [3,2] × [4,5] = [12, 10]</text>
+      </svg>
+
+      <p>That incoming gradient has a name: the <strong>upstream gradient</strong>. In our code, it's the <code>out_grad</code> parameter. Every <code>backward</code> method does the same thing: take <code>out_grad</code>, multiply by the local derivative, pass the result to each input.</p>
+
+      <p>Let's look at how this translates to code for <code>Add</code> and <code>Mul</code>:</p>
 
 <pre><code class="language-python">class Add(Function):
     def forward(self, a: NDArray, b: NDArray):
         return a + b
 
     def backward(self, out_grad, node):
-        # derivative of (a + b) wrt a is 1
-        # derivative of (a + b) wrt b is 1
-        # this is local derivative
-        return out_grad, out_grad
+        # For a + b:
+        #   if a increases by 1, output increases by 1 → local derivative is 1
+        #   if b increases by 1, output increases by 1 → local derivative is 1
+        # Multiply out_grad by each local derivative:
+        return out_grad * 1, out_grad * 1  # simplifies to: out_grad, out_grad
+
 class Mul(Function):
     def forward(self, a: NDArray, b: NDArray):
         return a * b
 
-    def backward(self, out_grad: Tensor, node: Tensor):
+    def backward(self, out_grad, node):
         a, b = node._inputs
-        # derivative of (a*b) wrt a is b
-        # derivative of (a*b) wrt b is a
+        # For a * b:
+        #   if a increases by 1, output increases by b → local derivative is b
+        #   if b increases by 1, output increases by a → local derivative is a
+        # Multiply out_grad by each local derivative:
         return out_grad * b, out_grad * a
 </code></pre>
 
-      <p>The <strong>out_grad</strong> would be the <strong>upstream gradient</strong> coming from the output.</p>
+      <p>Let's plug in real numbers to see why <code>Mul</code> works that way. Say <code>a = 4</code> and <code>b = 3</code>, so <code>a * b = 12</code>.</p>
+      <ul>
+        <li>Nudge <code>a</code> to 4.01 → output becomes 4.01 × 3 = <strong>12.03</strong>. It moved by 0.03, which is 0.01 × <code>b</code>. So the local derivative for <code>a</code> is <code>b</code>.</li>
+        <li>Nudge <code>b</code> to 3.01 → output becomes 4 × 3.01 = <strong>12.04</strong>. It moved by 0.04, which is 0.01 × <code>a</code>. So the local derivative for <code>b</code> is <code>a</code>.</li>
+      </ul>
+      <p>Then multiply each by <code>out_grad</code> (the gradient arriving from upstream) and return both. That's all <code>backward</code> does.</p>
+
+      <p>For <code>Add</code> it's even simpler: nudge either input by 0.01 and the output moves by exactly 0.01. Local derivative is always 1, so you just pass <code>out_grad</code> straight through.</p>
+
+      <p>The pattern is always the same: <code>out_grad × local_derivative</code>. Every <code>backward</code> method you write will follow this pattern.</p>
 
       <p><strong>File</strong>: <strong>babygrad/ops.py</strong></p>
 

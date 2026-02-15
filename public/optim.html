@@ -35,6 +35,13 @@
 
       <p>We will build SGD and Adam.</p>
 
+      <details class="context">
+        <summary>I don't really get gradient descent — how does it work?</summary>
+        <div class="context-body">
+          <p>3Blue1Brown's <a href="https://www.youtube.com/watch?v=IHZwWFHWa-w">Gradient descent, how neural networks learn</a> visualizes exactly what an optimizer does — adjusting weights to minimize error — and why the gradient tells you which direction to go. Worth watching before implementing SGD below.</p>
+        </div>
+      </details>
+
       <div class="note">
         <p>This is how our <strong>folder structure</strong> currently looks. In this chapter we will work inside <strong>babygrad/optim.py</strong>.</p>
         <pre><code>project/

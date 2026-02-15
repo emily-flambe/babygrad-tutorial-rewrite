@@ -1,5 +1,9 @@
 # babygrad Tutorial Guidelines
 
+## Audience Mindset
+
+**The reader is a beginner.** When editing or reviewing tutorial content, put yourself in the mindset of someone who is rusty on calculus, has never built a deep learning library, and doesn't know what "upstream gradient" or "local derivative" means yet. Every explanation, diagram, code comment, and label should make sense to that person *without* requiring them to already understand the concept being taught. If something would confuse a beginner — an unlabeled element, an unexplained term, a symbol that appears out of nowhere — fix it, don't just style it differently.
+
 ## Content Replication Approach
 
 **IMPORTANT: Faithfully replicate the original zekcrates tutorial.**
